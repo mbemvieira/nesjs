@@ -1,17 +1,25 @@
-import CPU from "./CPU";
-import RAM from "./RAM";
+import CPU from "./CPU.js";
+import RAM from "./RAM.js";
 
 export default class Console {
-    #cpu
-    #ram
+    RAM_SIZE = 0x2000;
+
+    #cpu;
+    #ram;
 
     constructor() {
-        let ram = new RAM();
-        this.#cpu = new CPU(ram);
-        this.#ram = ram;
+        this.#ram = new RAM(this.RAM_SIZE);
+        this.#cpu = new CPU();
     }
 
     start() {
-        this.#cpu.interpret();        
+        let program = new Uint8Array([
+            0xA9, 0xC0,
+            // 0xAA,
+            // 0xE8,
+            0x00
+        ]);
+
+        this.#cpu.interpret(program);
     }
 }

@@ -1,5 +1,7 @@
 export default class RAM {
-    constructor() {
-        
+    #memory;
+
+    constructor(size) {
+        this.#memory = new Uint8Array(size);
     }
 }
