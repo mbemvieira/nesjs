@@ -1,4 +1,9 @@
+import Opcode from "./Opcode.js";
+import AddressingMode from "./AddressingMode.js";
+
 export default class CPU {
+    PC_FIRST_ADDRESS = 0xFFFC;
+
     #memory;
 
     // N V _ B - D I Z C
@@ -8,7 +13,7 @@ export default class CPU {
     #registerX;
 
     #programCounter;
-    #opcodes;
+    #instructionSet;
 
     constructor(memory) {
         this.#memory = memory;
@@ -25,7 +30,7 @@ export default class CPU {
         this.setRegisterX(0);
         this.setStatus(0);
 
-        let programCounterStart = this.#memory.readWord(0xFFFC);
+        let programCounterStart = this.#memory.readWord(this.PC_FIRST_ADDRESS);
 
         if (programCounterStart === null) {
             programCounterStart = 0x0000;
@@ -96,22 +101,43 @@ export default class CPU {
 
             this.incProgramCounter();
 
-            if (!this.#opcodes.has(opcode)) {
+            if (!this.#instructionSet.has(opcode)) {
                 break;
             }
 
-            const opcodeFunc = this.#opcodes.get(opcode);
+            const opcodeFunc = this.#instructionSet.get(opcode);
             opcodeFunc();
         }
     }
 
     #initOpcodes() {
-        this.#opcodes = new Map();
+        this.#instructionSet = new Map();
 
-        this.#opcodes.set(0xA9, this.#instructionLDA.bind(this));
-        this.#opcodes.set(0xAA, this.#instructionTAX.bind(this));
-        this.#opcodes.set(0xE8, this.#instructionINX.bind(this));
-        this.#opcodes.set(0x00, this.#instructionBRK.bind(this));
+        // this.#instructionSet.set(0xA9, this.#instructionLDA.bind(this));
+        // this.#instructionSet.set(0xAA, this.#instructionTAX.bind(this));
+        // this.#instructionSet.set(0xE8, this.#instructionINX.bind(this));
+        // this.#instructionSet.set(0x00, this.#instructionBRK.bind(this));
+
+        this.#instructionSet.set(0x00, new Opcode(0x00, 'BRK', 1, 7, AddressingMode.none));
+        this.#instructionSet.set(0xAA, new Opcode(0xAA, 'TAX', 1, 2, AddressingMode.none));
+        this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, AddressingMode.none));
+
+        this.#instructionSet.set(0xA9, new Opcode(0xA9, 'LDA', 2, 2, AddressingMode.immediate));
+        this.#instructionSet.set(0xA5, new Opcode(0xA5, 'LDA', 2, 3, AddressingMode.zeroPage));
+        this.#instructionSet.set(0xB5, new Opcode(0xB5, 'LDA', 2, 4, AddressingMode.zeroPageX));
+        this.#instructionSet.set(0xAD, new Opcode(0xAD, 'LDA', 3, 4, AddressingMode.absolute));
+        this.#instructionSet.set(0xBD, new Opcode(0xBD, 'LDA', 3, 4/*+1 if page crossed*/, AddressingMode.absoluteX));
+        this.#instructionSet.set(0xB9, new Opcode(0xB9, 'LDA', 3, 4/*+1 if page crossed*/, AddressingMode.absoluteY));
+        this.#instructionSet.set(0xA1, new Opcode(0xA1, 'LDA', 2, 6, AddressingMode.indirectX));
+        this.#instructionSet.set(0xB1, new Opcode(0xB1, 'LDA', 2, 5/*+1 if page crossed*/, AddressingMode.indirectY));
+
+        this.#instructionSet.set(0x85, new Opcode(0x85, 'STA', 2, 3, AddressingMode.zeroPage));
+        this.#instructionSet.set(0x95, new Opcode(0x95, 'STA', 2, 4, AddressingMode.zeroPageX));
+        this.#instructionSet.set(0x8D, new Opcode(0x8D, 'STA', 3, 4, AddressingMode.absolute));
+        this.#instructionSet.set(0x9D, new Opcode(0x9D, 'STA', 3, 5, AddressingMode.absoluteX));
+        this.#instructionSet.set(0x99, new Opcode(0x99, 'STA', 3, 5, AddressingMode.absoluteY));
+        this.#instructionSet.set(0x81, new Opcode(0x85, 'STA', 2, 6, AddressingMode.indirectX));
+        this.#instructionSet.set(0x91, new Opcode(0x85, 'STA', 2, 6, AddressingMode.indirectY));
     }
 
     #instructionLDA() {
@@ -128,15 +154,15 @@ export default class CPU {
     #instructionTAX() {
         this.setRegisterX(this.getRegisterA());
 
-        this.#checkZeroFlag(this.#registerX[0]);
-        this.#checkNegativeFlag(this.#registerX[0]);
+        this.#checkZeroFlag(this.getRegisterX());
+        this.#checkNegativeFlag(this.getRegisterX());
     }
 
     #instructionINX() {
         this.setRegisterX(this.getRegisterX() + 1);
 
-        this.#checkZeroFlag(this.#registerX[0]);
-        this.#checkNegativeFlag(this.#registerX[0]);
+        this.#checkZeroFlag(this.getRegisterX);
+        this.#checkNegativeFlag(this.getRegisterX);
     }
 
     #instructionBRK() {
