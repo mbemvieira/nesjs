@@ -1,15 +1,15 @@
 import CPU from "./CPU.js";
-import RAM from "./RAM.js";
+import Memory from "./Memory.js";
 
 export default class Console {
-    RAM_SIZE = 0x2000;
+    MEMORY_SIZE = 0x1_0000;
 
     #cpu;
-    #ram;
+    #memory;
 
     constructor() {
-        this.#ram = new RAM(this.RAM_SIZE);
-        this.#cpu = new CPU();
+        this.#memory = new Memory(this.MEMORY_SIZE);
+        this.#cpu = new CPU(this.#memory);
     }
 
     start() {
@@ -20,6 +20,10 @@ export default class Console {
             0x00
         ]);
 
-        this.#cpu.interpret(program);
+        this.#memory.copy(program, 0x8000);
+        this.#memory.writeWord(0xFFFC, 0x8000);
+
+        this.#cpu.reset();
+        this.#cpu.run();
     }
 }

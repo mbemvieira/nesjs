@@ -1,6 +1,5 @@
 export default class CPU {
-    // #cpuRAM;
-    #prgROM;
+    #memory;
 
     // N V _ B - D I Z C
     #status;
@@ -11,14 +10,28 @@ export default class CPU {
     #programCounter;
     #opcodes;
 
-    constructor() {
-        // this.#cpuRAM = ram;
+    constructor(memory) {
+        this.#memory = memory;
+        this.#status = new Uint8Array(1);
         this.#registerA = new Uint8Array(1);
         this.#registerX = new Uint8Array(1);
-        this.#status = new Uint8Array(1);
         this.#programCounter = new Uint16Array(1);
 
         this.#initOpcodes();
+    }
+
+    reset() {
+        this.setRegisterA(0);
+        this.setRegisterX(0);
+        this.setStatus(0);
+
+        let programCounterStart = this.#memory.readWord(0xFFFC);
+
+        if (programCounterStart === null) {
+            programCounterStart = 0x0000;
+        }
+
+        this.setProgramCounter(programCounterStart);
     }
 
     getStatus() {
@@ -37,14 +50,51 @@ export default class CPU {
         return this.#programCounter[0];
     }
 
-    interpret(program) {
-        this.#prgROM = program;
-        this.#programCounter[0] = 0;
+    setStatus(value) {
+        this.#status[0] = value;
+    }
 
+    setNegativeFlag() {
+        this.setStatus(this.getStatus() | 0b1000_0000);
+    }
+
+    unsetNegativeFlag() {
+        this.setStatus(this.getStatus() & 0b0111_1111);
+    }
+
+    setZeroFlag() {
+        this.setStatus(this.getStatus() | 0b0000_0010);
+    }
+
+    unsetZeroFlag() {
+        this.setStatus(this.getStatus() & 0b1111_1101);
+    }
+
+    setRegisterA(value) {
+        return this.#registerA[0] = value;
+    }
+
+    setRegisterX(value) {
+        return this.#registerX[0] = value;
+    }
+
+    setProgramCounter(value) {
+        this.#programCounter[0] = value;
+    }
+
+    setProgramCounter(value) {
+        this.#programCounter[0] = value;
+    }
+
+    incProgramCounter() {
+        this.#programCounter[0] += 1;
+    }
+
+    run() {
         while(1) {
-            const opcode = this.#prgROM[this.#programCounter[0]];
+            const opcode = this.#memory[this.getProgramCounter()];
 
-            this.#programCounter[0] += 1;
+            this.incProgramCounter();
 
             if (!this.#opcodes.has(opcode)) {
                 break;
@@ -65,24 +115,25 @@ export default class CPU {
     }
 
     #instructionLDA() {
-        const value = this.#prgROM[this.#programCounter[0]];
-        
-        this.#programCounter[0] += 1;
-        this.#registerA[0] = value;
+        const value = this.#memory[this.getProgramCounter()];
 
-        this.#checkZeroFlag(this.#registerA[0]);
-        this.#checkNegativeFlag(this.#registerA[0]);
+        this.incProgramCounter();
+
+        this.setRegisterA(value);
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
     }
 
     #instructionTAX() {
-        this.#registerX[0] = this.#registerA[0];
+        this.setRegisterX(this.getRegisterA());
 
         this.#checkZeroFlag(this.#registerX[0]);
         this.#checkNegativeFlag(this.#registerX[0]);
     }
 
     #instructionINX() {
-        this.#registerX[0] += 1;
+        this.setRegisterX(this.getRegisterX() + 1);
 
         this.#checkZeroFlag(this.#registerX[0]);
         this.#checkNegativeFlag(this.#registerX[0]);
@@ -94,21 +145,18 @@ export default class CPU {
 
     #checkZeroFlag(value) {
         if (value == 0) {
-            // equal to zero
-            this.#status[0] = this.#status[0] | 0b0000_0010;
+            this.setZeroFlag();
         } else {
-            // not equal to zero
-            this.#status[0] = this.#status[0] & 0b1111_1101;
+            this.unsetZeroFlag();
         }
     }
 
     #checkNegativeFlag(value) {
+        // Check sign bit. if 1 then negative else positive
         if ((value & 0b1000_0000) == 0) {
-            // Positive
-            this.#status[0] = this.#status[0] & 0b0111_1111;
+            this.unsetNegativeFlag();
         } else {
-            // Negative
-            this.#status[0] = this.#status[0] | 0b1000_0000;
+            this.setNegativeFlag();
         }
     }
 }
