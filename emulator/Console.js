@@ -6,24 +6,24 @@ export default class Console {
 
     #cpu;
     #memory;
+    #program;
 
-    constructor() {
+    constructor(program) {
         this.#memory = new Memory(this.MEMORY_SIZE);
         this.#cpu = new CPU(this.#memory);
-    }
+        this.#program = program;
 
-    start() {
-        let program = new Uint8Array([
-            0xA9, 0xC0,
-            // 0xAA,
-            // 0xE8,
-            0x00
-        ]);
-
-        this.#memory.copy(program, 0x8000);
+        this.#memory.copy(this.#program, 0x8000);
         this.#memory.writeWord(0xFFFC, 0x8000);
 
         this.#cpu.reset();
+    }
+
+    start() {
         this.#cpu.run();
+    }
+
+    getCPU() {
+        return this.#cpu;
     }
 }
