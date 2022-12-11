@@ -12,5 +12,5 @@ test('LDA-0xA9', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterA()).toBe(0xC0);
-    expect(cpu.getStatus()).toBe(0b1000_0000);
+    expect(cpu.getStatus()).toBe(0b1010_0100);
 });

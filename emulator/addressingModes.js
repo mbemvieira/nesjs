@@ -9,4 +9,5 @@ export default {
     indirectX: 8,
     indirectY: 9,
     none: 10,
+    relative: 11,
 };

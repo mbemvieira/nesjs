@@ -1,5 +1,6 @@
 import Opcode from "./Opcode.js";
-import AddressingMode from "./AddressingMode.js";
+import addressingModes from "./addressingModes.js";
+import { zeroBinary, signBitMask, statusMasks, statusUnsetMasks } from "./masks.js";
 
 export default class CPU {
     PC_RESET = 0xFFFC;
@@ -76,6 +77,30 @@ export default class CPU {
         return this.#status.getUint8();
     }
 
+    isCarryFlagClear() {
+        return (this.#status.getUint8() & statusMasks.CARRY) === zeroBinary;
+    }
+
+    isCarryFlagSet() {
+        return (this.#status.getUint8() & statusMasks.CARRY) === statusMasks.CARRY;
+    }
+
+    isZeroFlagClear() {
+        return (this.#status.getUint8() & statusMasks.ZERO) === zeroBinary;
+    }
+
+    isZeroFlagSet() {
+        return (this.#status.getUint8() & statusMasks.ZERO) === statusMasks.ZERO;
+    }
+
+    isNegativeFlagClear() {
+        return (this.#status.getUint8() & statusMasks.NEGATIVE) === zeroBinary;
+    }
+
+    isNegativeFlagSet() {
+        return (this.#status.getUint8() & statusMasks.NEGATIVE) === statusMasks.NEGATIVE;
+    }
+
     getRegisterA() {
         return this.#registerA.getUint8();
     }
@@ -112,28 +137,28 @@ export default class CPU {
         this.#status.setUint8(0, value);
     }
 
-    setNegativeFlag() {
-        this.setStatus(this.getStatus() | 0b1000_0000);
-    }
-
-    unsetNegativeFlag() {
-        this.setStatus(this.getStatus() & 0b0111_1111);
-    }
-
-    setZeroFlag() {
-        this.setStatus(this.getStatus() | 0b0000_0010);
-    }
-
-    unsetZeroFlag() {
-        this.setStatus(this.getStatus() & 0b1111_1101);
-    }
-
     setCarryFlag() {
-        this.setStatus(this.getStatus() | 0b0000_0001);
+        this.setStatus(this.getStatus() | statusMasks.CARRY);
     }
 
     unsetCarryFlag() {
-        this.setStatus(this.getStatus() & 0b1111_1110);
+        this.setStatus(this.getStatus() & statusUnsetMasks.CARRY);
+    }
+
+    setZeroFlag() {
+        this.setStatus(this.getStatus() | statusMasks.ZERO);
+    }
+
+    unsetZeroFlag() {
+        this.setStatus(this.getStatus() & statusUnsetMasks.ZERO);
+    }
+
+    setNegativeFlag() {
+        this.setStatus(this.getStatus() | statusMasks.NEGATIVE);
+    }
+
+    unsetNegativeFlag() {
+        this.setStatus(this.getStatus() & statusUnsetMasks.NEGATIVE);
     }
 
     setRegisterA(value) {
@@ -180,54 +205,59 @@ export default class CPU {
         const instructionSTA = (opcode) => this.#instructionSTA.call(this, opcode);
         const instructionTAX = () => this.#instructionTAX.call(this);
 
-        this.#instructionSet.set(0x29, new Opcode(0x29, 'AND', 2, 2, AddressingMode.immediate, instructionAND));
-        this.#instructionSet.set(0x25, new Opcode(0x25, 'AND', 2, 3, AddressingMode.zeroPage, instructionAND));
-        this.#instructionSet.set(0x35, new Opcode(0x35, 'AND', 2, 4, AddressingMode.zeroPageX, instructionAND));
-        this.#instructionSet.set(0x2D, new Opcode(0x2D, 'AND', 3, 4, AddressingMode.absolute, instructionAND));
-        this.#instructionSet.set(0x3D, new Opcode(0x3D, 'AND', 3, 4/*+1 if page crossed*/, AddressingMode.absoluteX, instructionAND));
-        this.#instructionSet.set(0x39, new Opcode(0x39, 'AND', 3, 4/*+1 if page crossed*/, AddressingMode.absoluteY, instructionAND));
-        this.#instructionSet.set(0x21, new Opcode(0x21, 'AND', 2, 6, AddressingMode.indirectX, instructionAND));
-        this.#instructionSet.set(0x31, new Opcode(0x31, 'AND', 2, 5/*+1 if page crossed*/, AddressingMode.indirectY, instructionAND));
+        this.#instructionSet.set(0x29, new Opcode(0x29, 'AND', 2, 2, addressingModes.immediate, instructionAND));
+        this.#instructionSet.set(0x25, new Opcode(0x25, 'AND', 2, 3, addressingModes.zeroPage, instructionAND));
+        this.#instructionSet.set(0x35, new Opcode(0x35, 'AND', 2, 4, addressingModes.zeroPageX, instructionAND));
+        this.#instructionSet.set(0x2D, new Opcode(0x2D, 'AND', 3, 4, addressingModes.absolute, instructionAND));
+        this.#instructionSet.set(0x3D, new Opcode(0x3D, 'AND', 3, 4/*+1 if page crossed*/, addressingModes.absoluteX, instructionAND));
+        this.#instructionSet.set(0x39, new Opcode(0x39, 'AND', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionAND));
+        this.#instructionSet.set(0x21, new Opcode(0x21, 'AND', 2, 6, addressingModes.indirectX, instructionAND));
+        this.#instructionSet.set(0x31, new Opcode(0x31, 'AND', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionAND));
 
-        this.#instructionSet.set(0x0A, new Opcode(0x0A, 'ASL', 1, 2, AddressingMode.none, instructionASLAccumulator));
-        this.#instructionSet.set(0x06, new Opcode(0x06, 'ASL', 2, 5, AddressingMode.zeroPage, instructionASL));
-        this.#instructionSet.set(0x16, new Opcode(0x16, 'ASL', 2, 6, AddressingMode.zeroPageX, instructionASL));
-        this.#instructionSet.set(0x0E, new Opcode(0x0E, 'ASL', 3, 6, AddressingMode.absolute, instructionASL));
-        this.#instructionSet.set(0x1E, new Opcode(0x1E, 'ASL', 3, 7, AddressingMode.absoluteX, instructionASL));
+        this.#instructionSet.set(0x0A, new Opcode(0x0A, 'ASL', 1, 2, addressingModes.none, instructionASLAccumulator));
+        this.#instructionSet.set(0x06, new Opcode(0x06, 'ASL', 2, 5, addressingModes.zeroPage, instructionASL));
+        this.#instructionSet.set(0x16, new Opcode(0x16, 'ASL', 2, 6, addressingModes.zeroPageX, instructionASL));
+        this.#instructionSet.set(0x0E, new Opcode(0x0E, 'ASL', 3, 6, addressingModes.absolute, instructionASL));
+        this.#instructionSet.set(0x1E, new Opcode(0x1E, 'ASL', 3, 7, addressingModes.absoluteX, instructionASL));
 
-        this.#instructionSet.set(0x00, new Opcode(0x00, 'BRK', 1, 7, AddressingMode.none, instructionBRK));
-        this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, AddressingMode.none, instructionINX));
+        this.#instructionSet.set(0x00, new Opcode(0x00, 'BRK', 1, 7, addressingModes.none, instructionBRK));
+        this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, addressingModes.none, instructionINX));
 
-        this.#instructionSet.set(0xA9, new Opcode(0xA9, 'LDA', 2, 2, AddressingMode.immediate, instructionLDA));
-        this.#instructionSet.set(0xA5, new Opcode(0xA5, 'LDA', 2, 3, AddressingMode.zeroPage, instructionLDA));
-        this.#instructionSet.set(0xB5, new Opcode(0xB5, 'LDA', 2, 4, AddressingMode.zeroPageX, instructionLDA));
-        this.#instructionSet.set(0xAD, new Opcode(0xAD, 'LDA', 3, 4, AddressingMode.absolute, instructionLDA));
-        this.#instructionSet.set(0xBD, new Opcode(0xBD, 'LDA', 3, 4/*+1 if page crossed*/, AddressingMode.absoluteX, instructionLDA));
-        this.#instructionSet.set(0xB9, new Opcode(0xB9, 'LDA', 3, 4/*+1 if page crossed*/, AddressingMode.absoluteY, instructionLDA));
-        this.#instructionSet.set(0xA1, new Opcode(0xA1, 'LDA', 2, 6, AddressingMode.indirectX, instructionLDA));
-        this.#instructionSet.set(0xB1, new Opcode(0xB1, 'LDA', 2, 5/*+1 if page crossed*/, AddressingMode.indirectY, instructionLDA));
+        this.#instructionSet.set(0xA9, new Opcode(0xA9, 'LDA', 2, 2, addressingModes.immediate, instructionLDA));
+        this.#instructionSet.set(0xA5, new Opcode(0xA5, 'LDA', 2, 3, addressingModes.zeroPage, instructionLDA));
+        this.#instructionSet.set(0xB5, new Opcode(0xB5, 'LDA', 2, 4, addressingModes.zeroPageX, instructionLDA));
+        this.#instructionSet.set(0xAD, new Opcode(0xAD, 'LDA', 3, 4, addressingModes.absolute, instructionLDA));
+        this.#instructionSet.set(0xBD, new Opcode(0xBD, 'LDA', 3, 4/*+1 if page crossed*/, addressingModes.absoluteX, instructionLDA));
+        this.#instructionSet.set(0xB9, new Opcode(0xB9, 'LDA', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionLDA));
+        this.#instructionSet.set(0xA1, new Opcode(0xA1, 'LDA', 2, 6, addressingModes.indirectX, instructionLDA));
+        this.#instructionSet.set(0xB1, new Opcode(0xB1, 'LDA', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionLDA));
 
-        this.#instructionSet.set(0x85, new Opcode(0x85, 'STA', 2, 3, AddressingMode.zeroPage, instructionSTA));
-        this.#instructionSet.set(0x95, new Opcode(0x95, 'STA', 2, 4, AddressingMode.zeroPageX, instructionSTA));
-        this.#instructionSet.set(0x8D, new Opcode(0x8D, 'STA', 3, 4, AddressingMode.absolute, instructionSTA));
-        this.#instructionSet.set(0x9D, new Opcode(0x9D, 'STA', 3, 5, AddressingMode.absoluteX, instructionSTA));
-        this.#instructionSet.set(0x99, new Opcode(0x99, 'STA', 3, 5, AddressingMode.absoluteY, instructionSTA));
-        this.#instructionSet.set(0x81, new Opcode(0x85, 'STA', 2, 6, AddressingMode.indirectX, instructionSTA));
-        this.#instructionSet.set(0x91, new Opcode(0x85, 'STA', 2, 6, AddressingMode.indirectY, instructionSTA));
+        this.#instructionSet.set(0x85, new Opcode(0x85, 'STA', 2, 3, addressingModes.zeroPage, instructionSTA));
+        this.#instructionSet.set(0x95, new Opcode(0x95, 'STA', 2, 4, addressingModes.zeroPageX, instructionSTA));
+        this.#instructionSet.set(0x8D, new Opcode(0x8D, 'STA', 3, 4, addressingModes.absolute, instructionSTA));
+        this.#instructionSet.set(0x9D, new Opcode(0x9D, 'STA', 3, 5, addressingModes.absoluteX, instructionSTA));
+        this.#instructionSet.set(0x99, new Opcode(0x99, 'STA', 3, 5, addressingModes.absoluteY, instructionSTA));
+        this.#instructionSet.set(0x81, new Opcode(0x85, 'STA', 2, 6, addressingModes.indirectX, instructionSTA));
+        this.#instructionSet.set(0x91, new Opcode(0x85, 'STA', 2, 6, addressingModes.indirectY, instructionSTA));
 
-        this.#instructionSet.set(0xAA, new Opcode(0xAA, 'TAX', 1, 2, AddressingMode.none, instructionTAX));
+        this.#instructionSet.set(0xAA, new Opcode(0xAA, 'TAX', 1, 2, addressingModes.none, instructionTAX));
     }
 
     #getOperandAddress(addressingMode) {
-        if (addressingMode === AddressingMode.immediate) {
+        if (addressingMode === addressingModes.immediate) {
             return this.getProgramCounter();
         }
 
-        if (addressingMode === AddressingMode.zeroPage) {
+        if (addressingMode === addressingModes.relative) {
+            const offset = this.#memory.read(this.getProgramCounter());
+            return this.getProgramCounter() + 1 + offset;
+        }
+
+        if (addressingMode === addressingModes.zeroPage) {
             return this.#memory.read(this.getProgramCounter());
         }
 
-        if (addressingMode === AddressingMode.zeroPageX) {
+        if (addressingMode === addressingModes.zeroPageX) {
             let operand = new DataView(new ArrayBuffer(1));
 
             operand.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterX());
@@ -235,7 +265,7 @@ export default class CPU {
             return operand.getUint8();
         }
 
-        if (addressingMode === AddressingMode.zeroPageY) {
+        if (addressingMode === addressingModes.zeroPageY) {
             let operand = new DataView(new ArrayBuffer(1));
 
             operand.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterY());
@@ -243,11 +273,11 @@ export default class CPU {
             return operand.getUint8();
         }
 
-        if (addressingMode === AddressingMode.absolute) {
+        if (addressingMode === addressingModes.absolute) {
             return this.#memory.readWord(this.getProgramCounter());
         }
 
-        if (addressingMode === AddressingMode.absoluteX) {
+        if (addressingMode === addressingModes.absoluteX) {
             let operand = new DataView(new ArrayBuffer(2));
 
             operand.setUint16(0, this.#memory.readWord(this.getProgramCounter()) + this.getRegisterX());
@@ -255,7 +285,7 @@ export default class CPU {
             return operand.getUint16();
         }
 
-        if (addressingMode === AddressingMode.absoluteY) {
+        if (addressingMode === addressingModes.absoluteY) {
             let operand = new DataView(new ArrayBuffer(2));
 
             operand.setUint16(0, this.#memory.readWord(this.getProgramCounter()) + this.getRegisterY());
@@ -263,7 +293,7 @@ export default class CPU {
             return operand.getUint16();
         }
 
-        if (addressingMode === AddressingMode.indirectX) {
+        if (addressingMode === addressingModes.indirectX) {
             let pointer = new DataView(new ArrayBuffer(1));
 
             pointer.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterX());
@@ -271,7 +301,7 @@ export default class CPU {
             return this.#memory.readWord(pointer.getUint8());
         }
 
-        if (addressingMode === AddressingMode.indirectY) {
+        if (addressingMode === addressingModes.indirectY) {
             let pointer = new DataView(new ArrayBuffer(1));
 
             pointer.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterY());
@@ -319,6 +349,12 @@ export default class CPU {
         this.#checkNegativeFlag(value);
     }
 
+    #instructionBCC(opcode) {
+        if (1) {
+            this.#branch(opcode);
+        }
+    }
+
     #instructionBRK() {
         return;
     }
@@ -352,9 +388,15 @@ export default class CPU {
         this.#checkNegativeFlag(this.getRegisterX());
     }
 
+    #branch(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+
+        this.setProgramCounter(operandAddress);
+    }
+
     #checkNegativeFlag(value) {
         // Check sign bit. if 1 then negative else positive
-        if ((value & 0b1000_0000) == 0) {
+        if ((value & signBitMask) === zeroBinary) {
             this.unsetNegativeFlag();
         } else {
             this.setNegativeFlag();
@@ -362,7 +404,7 @@ export default class CPU {
     }
 
     #checkZeroFlag(value) {
-        if (value == 0) {
+        if (value === zeroBinary) {
             this.setZeroFlag();
         } else {
             this.unsetZeroFlag();

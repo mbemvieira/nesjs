@@ -14,7 +14,7 @@ test('INX-0xE8: increment multiple times', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterX()).toBe(0x03);
-    expect(cpu.getStatus()).toBe(0b0000_0000);
+    expect(cpu.getStatus()).toBe(0b0010_0100);
 });
 
 test('INX-0xE8: overflow and zero flag', () => {
@@ -30,7 +30,7 @@ test('INX-0xE8: overflow and zero flag', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterX()).toBe(0x00);
-    expect(cpu.getStatus()).toBe(0b0000_0010);
+    expect(cpu.getStatus()).toBe(0b0010_0110);
 });
 
 test('INX-0xE8: negative flag', () => {
@@ -46,5 +46,5 @@ test('INX-0xE8: negative flag', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterX()).toBe(0x80);
-    expect(cpu.getStatus()).toBe(0b1000_0000);
+    expect(cpu.getStatus()).toBe(0b1010_0100);
 });
