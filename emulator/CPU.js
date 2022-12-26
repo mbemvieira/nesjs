@@ -1,6 +1,6 @@
 import Opcode from "./Opcode.js";
 import addressingModes from "./addressingModes.js";
-import { zeroBinary, signBitMask, statusMasks, statusUnsetMasks } from "./masks.js";
+import { signBitMask, statusMasks, statusUnsetMasks } from "./masks.js";
 
 export default class CPU {
     PC_RESET = 0xFFFC;
@@ -70,47 +70,55 @@ export default class CPU {
     }
 
     getStackPointer() {
-        return this.#stackPointer.getUint8();
+        return this.#stackPointer.getUint8(0);
     }
 
     getStatus() {
-        return this.#status.getUint8();
+        return this.#status.getUint8(0);
     }
 
     isCarryFlagClear() {
-        return (this.#status.getUint8() & statusMasks.CARRY) === zeroBinary;
+        return (this.#status.getUint8(0) & statusMasks.CARRY) === 0;
     }
 
     isCarryFlagSet() {
-        return (this.#status.getUint8() & statusMasks.CARRY) === statusMasks.CARRY;
+        return (this.#status.getUint8(0) & statusMasks.CARRY) === statusMasks.CARRY;
     }
 
     isZeroFlagClear() {
-        return (this.#status.getUint8() & statusMasks.ZERO) === zeroBinary;
+        return (this.#status.getUint8(0) & statusMasks.ZERO) === 0;
     }
 
     isZeroFlagSet() {
-        return (this.#status.getUint8() & statusMasks.ZERO) === statusMasks.ZERO;
+        return (this.#status.getUint8(0) & statusMasks.ZERO) === statusMasks.ZERO;
+    }
+
+    isOverflowFlagClear() {
+        return (this.#status.getUint8(0) & statusMasks.OVERFLOW) === 0;
+    }
+
+    isOverflowFlagSet() {
+        return (this.#status.getUint8(0) & statusMasks.OVERFLOW) === statusMasks.OVERFLOW;
     }
 
     isNegativeFlagClear() {
-        return (this.#status.getUint8() & statusMasks.NEGATIVE) === zeroBinary;
+        return (this.#status.getUint8(0) & statusMasks.NEGATIVE) === 0;
     }
 
     isNegativeFlagSet() {
-        return (this.#status.getUint8() & statusMasks.NEGATIVE) === statusMasks.NEGATIVE;
+        return (this.#status.getUint8(0) & statusMasks.NEGATIVE) === statusMasks.NEGATIVE;
     }
 
     getRegisterA() {
-        return this.#registerA.getUint8();
+        return this.#registerA.getUint8(0);
     }
 
     getRegisterX() {
-        return this.#registerX.getUint8();
+        return this.#registerX.getUint8(0);
     }
 
     getRegisterY() {
-        return this.#registerY.getUint8();
+        return this.#registerY.getUint8(0);
     }
 
     setProgramCounter(value) {
@@ -151,6 +159,14 @@ export default class CPU {
 
     unsetZeroFlag() {
         this.setStatus(this.getStatus() & statusUnsetMasks.ZERO);
+    }
+
+    setOverflowFlag() {
+        this.setStatus(this.getStatus() | statusMasks.OVERFLOW);
+    }
+
+    unsetOverflowFlag() {
+        this.setStatus(this.getStatus() & statusUnsetMasks.OVERFLOW);
     }
 
     setNegativeFlag() {
@@ -196,14 +212,32 @@ export default class CPU {
     }
 
     #initOpcodes() {
+        const instructionADC = (opcode) => this.#instructionADC.call(this, opcode);
         const instructionAND = (opcode) => this.#instructionAND.call(this, opcode);
         const instructionASLAccumulator = () => this.#instructionASLAccumulator.call(this);
         const instructionASL = (opcode) => this.#instructionASL.call(this, opcode);
+        const instructionBCC = (opcode) => this.#instructionBCC.call(this, opcode);
+        const instructionBCS = (opcode) => this.#instructionBCS.call(this, opcode);
+        const instructionBEQ = (opcode) => this.#instructionBEQ.call(this, opcode);
+        const instructionBMI = (opcode) => this.#instructionBMI.call(this, opcode);
+        const instructionBNE = (opcode) => this.#instructionBNE.call(this, opcode);
+        const instructionBPL = (opcode) => this.#instructionBPL.call(this, opcode);
         const instructionBRK = () => this.#instructionBRK.call(this);
+        const instructionBVC = (opcode) => this.#instructionBVC.call(this, opcode);
+        const instructionBVS = (opcode) => this.#instructionBVS.call(this, opcode);
         const instructionINX = () => this.#instructionINX.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
         const instructionSTA = (opcode) => this.#instructionSTA.call(this, opcode);
         const instructionTAX = () => this.#instructionTAX.call(this);
+
+        this.#instructionSet.set(0x69, new Opcode(0x69, 'ADC', 2, 2, addressingModes.immediate, instructionADC));
+        this.#instructionSet.set(0x65, new Opcode(0x65, 'ADC', 2, 3, addressingModes.zeroPage, instructionADC));
+        this.#instructionSet.set(0x75, new Opcode(0x75, 'ADC', 2, 4, addressingModes.zeroPageX, instructionADC));
+        this.#instructionSet.set(0x6D, new Opcode(0x6D, 'ADC', 3, 4, addressingModes.absolute, instructionADC));
+        this.#instructionSet.set(0x7D, new Opcode(0x7D, 'ADC', 3, 4/*+1 if page crossed*/, addressingModes.absoluteX, instructionADC));
+        this.#instructionSet.set(0x79, new Opcode(0x79, 'ADC', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionADC));
+        this.#instructionSet.set(0x61, new Opcode(0x61, 'ADC', 2, 6, addressingModes.indirectX, instructionADC));
+        this.#instructionSet.set(0x71, new Opcode(0x71, 'ADC', 2, 5/*+1 if page crossed*/, addressingModes.indirectX, instructionADC));
 
         this.#instructionSet.set(0x29, new Opcode(0x29, 'AND', 2, 2, addressingModes.immediate, instructionAND));
         this.#instructionSet.set(0x25, new Opcode(0x25, 'AND', 2, 3, addressingModes.zeroPage, instructionAND));
@@ -220,7 +254,18 @@ export default class CPU {
         this.#instructionSet.set(0x0E, new Opcode(0x0E, 'ASL', 3, 6, addressingModes.absolute, instructionASL));
         this.#instructionSet.set(0x1E, new Opcode(0x1E, 'ASL', 3, 7, addressingModes.absoluteX, instructionASL));
 
+        this.#instructionSet.set(0x90, new Opcode(0x90, 'BCC', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBCC));
+        this.#instructionSet.set(0xB0, new Opcode(0xB0, 'BCS', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBCS));
+        this.#instructionSet.set(0xF0, new Opcode(0xF0, 'BEQ', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBEQ));
+        this.#instructionSet.set(0x30, new Opcode(0x30, 'BMI', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBMI));
+        this.#instructionSet.set(0xD0, new Opcode(0xD0, 'BNE', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBNE));
+        this.#instructionSet.set(0x10, new Opcode(0x10, 'BPL', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBPL));
+
         this.#instructionSet.set(0x00, new Opcode(0x00, 'BRK', 1, 7, addressingModes.none, instructionBRK));
+
+        this.#instructionSet.set(0x50, new Opcode(0x50, 'BVC', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBVC));
+        this.#instructionSet.set(0x70, new Opcode(0x70, 'BVS', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBVS));
+
         this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, addressingModes.none, instructionINX));
 
         this.#instructionSet.set(0xA9, new Opcode(0xA9, 'LDA', 2, 2, addressingModes.immediate, instructionLDA));
@@ -262,7 +307,7 @@ export default class CPU {
 
             operand.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterX());
 
-            return operand.getUint8();
+            return operand.getUint8(0);
         }
 
         if (addressingMode === addressingModes.zeroPageY) {
@@ -270,7 +315,7 @@ export default class CPU {
 
             operand.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterY());
 
-            return operand.getUint8();
+            return operand.getUint8(0);
         }
 
         if (addressingMode === addressingModes.absolute) {
@@ -298,7 +343,7 @@ export default class CPU {
 
             pointer.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterX());
 
-            return this.#memory.readWord(pointer.getUint8());
+            return this.#memory.readWord(pointer.getUint8(0));
         }
 
         if (addressingMode === addressingModes.indirectY) {
@@ -306,10 +351,48 @@ export default class CPU {
 
             pointer.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterY());
 
-            return this.#memory.readWord(pointer.getUint8());
+            return this.#memory.readWord(pointer.getUint8(0));
         }
 
         return;
+    }
+
+    #instructionADC(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const value = this.#memory.read(operandAddress);
+
+        let sum = this.getRegisterA() + value;
+
+        if (this.isCarryFlagSet()) {
+            sum += 1;
+        }
+
+        if (sum > 0xFF) {
+            this.setCarryFlag();
+        }
+
+        const result = new DataView(new ArrayBuffer(1));
+
+        result.setUint8(0, sum);
+
+        // If both terms have equal signs but the sum has a different sign, then overflow is set.
+        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        if (
+            (
+                (result.getUint8(0) ^ this.getRegisterA()) &
+                (result.getUint8(0) ^ value) &
+                signBitMask
+            ) != 0
+        ) {
+            this.setOverflowFlag();
+        } else {
+            this.unsetOverflowFlag();
+        }
+
+        this.setRegisterA(result.getUint8(0));
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
     }
 
     #instructionAND(opcode) {
@@ -326,11 +409,11 @@ export default class CPU {
         const operandAddress = this.#getOperandAddress(opcode.mode);
         let value = this.#memory.read(operandAddress);
 
-        this.#checkCarryFlag(value);
+        this.#checkCarryFlagASL(value);
 
         value <<= 1;
 
-        this.#memory.write(value);
+        this.#memory.write(operandAddress, value);
 
         this.#checkZeroFlag(value);
         this.#checkNegativeFlag(value);
@@ -339,7 +422,7 @@ export default class CPU {
     #instructionASLAccumulator() {
         let value = this.getRegisterA();
 
-        this.#checkCarryFlag(value);
+        this.#checkCarryFlagASL(value);
 
         value <<= 1;
 
@@ -350,7 +433,41 @@ export default class CPU {
     }
 
     #instructionBCC(opcode) {
-        if (1) {
+        if (this.isCarryFlagClear()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionBCS(opcode) {
+        if (this.isCarryFlagSet()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionBEQ(opcode) {
+        if (this.isZeroFlagSet()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionBIT(opcode) {
+        // TODO
+    }
+
+    #instructionBMI(opcode) {
+        if (this.isNegativeFlagSet()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionBNE(opcode) {
+        if (this.isZeroFlagClear()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionBPL(opcode) {
+        if (this.isNegativeFlagClear()) {
             this.#branch(opcode);
         }
     }
@@ -359,11 +476,94 @@ export default class CPU {
         return;
     }
 
+    #instructionBVC(opcode) {
+        if (this.isOverflowFlagClear()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionBVS(opcode) {
+        if (this.isOverflowFlagSet()) {
+            this.#branch(opcode);
+        }
+    }
+
+    #instructionCLC(opcode) {
+        // TODO
+    }
+
+    #instructionCLD(opcode) {
+        // TODO
+    }
+
+    #instructionCLI(opcode) {
+        // TODO
+    }
+
+    #instructionCLV(opcode) {
+        // TODO
+    }
+
+    #instructionCMP(opcode) {
+        // TODO
+    }
+
+    #instructionCPX(opcode) {
+        // TODO
+    }
+
+    #instructionCPY(opcode) {
+        // TODO
+    }
+
+    #instructionDEC(opcode) {
+        // TODO
+    }
+
+    #instructionDEX(opcode) {
+        // TODO
+    }
+
+    #instructionDEY(opcode) {
+        // TODO
+    }
+
+    #instructionEOR(opcode) {
+        // TODO
+    }
+
+    #instructionINC(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        let value = this.#memory.read(operandAddress);
+
+        value += 1;
+
+        this.#memory.write(operandAddress, value);
+
+        this.#checkZeroFlag(value);
+        this.#checkNegativeFlag(value);
+    }
+
     #instructionINX() {
         this.setRegisterX(this.getRegisterX() + 1);
 
         this.#checkZeroFlag(this.getRegisterX());
         this.#checkNegativeFlag(this.getRegisterX());
+    }
+
+    #instructionINY() {
+        this.setRegisterY(this.getRegisterY() + 1);
+
+        this.#checkZeroFlag(this.getRegisterY());
+        this.#checkNegativeFlag(this.getRegisterY());
+    }
+
+    #instructionJMP(opcode) {
+        // TODO
+    }
+
+    #instructionJSR(opcode) {
+        // TODO
     }
 
     #instructionLDA(opcode) {
@@ -376,9 +576,99 @@ export default class CPU {
         this.#checkNegativeFlag(this.getRegisterA());
     }
 
+    #instructionLDX(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const value = this.#memory.read(operandAddress);
+
+        this.setRegisterX(value);
+
+        this.#checkZeroFlag(this.getRegisterX());
+        this.#checkNegativeFlag(this.getRegisterX());
+    }
+
+    #instructionLDY(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const value = this.#memory.read(operandAddress);
+
+        this.setRegisterY(value);
+
+        this.#checkZeroFlag(this.getRegisterY());
+        this.#checkNegativeFlag(this.getRegisterY());
+    }
+
+    #instructionLSR(opcode) {
+        // TODO
+    }
+
+    #instructionNOP(opcode) {
+        // TODO
+    }
+
+    #instructionORA(opcode) {
+        // TODO
+    }
+
+    #instructionPHA(opcode) {
+        // TODO
+    }
+
+    #instructionPHP(opcode) {
+        // TODO
+    }
+
+    #instructionPLA(opcode) {
+        // TODO
+    }
+
+    #instructionPLP(opcode) {
+        // TODO
+    }
+
+    #instructionROL(opcode) {
+        // TODO
+    }
+
+    #instructionROR(opcode) {
+        // TODO
+    }
+
+    #instructionRTI(opcode) {
+        // TODO
+    }
+
+    #instructionRTS(opcode) {
+        // TODO
+    }
+
+    #instructionSBC(opcode) {
+        // TODO
+    }
+
+    #instructionSEC(opcode) {
+        // TODO
+    }
+
+    #instructionSED(opcode) {
+        // TODO
+    }
+
+    #instructionSEI(opcode) {
+        // TODO
+    }
+
     #instructionSTA(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
         this.#memory.write(operandAddress, this.getRegisterA());
+    }
+
+    #instructionSTX(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        this.#memory.write(operandAddress, this.getRegisterX());
+    }
+
+    #instructionSTY(opcode) {
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        this.#memory.write(operandAddress, this.getRegisterY());
     }
 
     #instructionTAX() {
@@ -388,34 +678,63 @@ export default class CPU {
         this.#checkNegativeFlag(this.getRegisterX());
     }
 
+    #instructionTAY() {
+        this.setRegisterY(this.getRegisterA());
+
+        this.#checkZeroFlag(this.getRegisterY());
+        this.#checkNegativeFlag(this.getRegisterY());
+    }
+
+    #instructionTSX(opcode) {
+        // TODO
+    }
+
+    #instructionTXA(opcode) {
+        this.setRegisterA(this.getRegisterX());
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
+    }
+
+    #instructionTXS(opcode) {
+        // TODO
+    }
+
+    #instructionTYA() {
+        this.setRegisterA(this.getRegisterY());
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
+    }
+
     #branch(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
 
         this.setProgramCounter(operandAddress);
     }
 
-    #checkNegativeFlag(value) {
-        // Check sign bit. if 1 then negative else positive
-        if ((value & signBitMask) === zeroBinary) {
-            this.unsetNegativeFlag();
+    #checkCarryFlagASL(value) {
+        if ((value >>> 7) == 1) {
+            this.setCarryFlag();
         } else {
-            this.setNegativeFlag();
+            this.unsetCarryFlag();
         }
     }
 
     #checkZeroFlag(value) {
-        if (value === zeroBinary) {
+        if (value === 0) {
             this.setZeroFlag();
         } else {
             this.unsetZeroFlag();
         }
     }
 
-    #checkCarryFlag(value) {
-        if ((value >>> 7) == 1) {
-            this.setCarryFlag();
+    #checkNegativeFlag(value) {
+        // Check sign bit. if 1 then negative else positive
+        if ((value & signBitMask) === 0) {
+            this.unsetNegativeFlag();
         } else {
-            this.unsetCarryFlag();
+            this.setNegativeFlag();
         }
     }
 }

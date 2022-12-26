@@ -1,4 +1,4 @@
-import Console from "../emulator/Console.js";
+import Console from "../../emulator/Console.js";
 
 test('INX-0xE8: increment multiple times', () => {
     let program = new Uint8Array([

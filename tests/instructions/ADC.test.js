@@ -1,8 +1,8 @@
-import Console from "../emulator/Console.js";
+import Console from "../../emulator/Console.js";
 
-test('LDA-0xA9', () => {
+test('ADC-0x69: immediate', () => {
     let program = new Uint8Array([
-        0xA9, 0xC0,
+        0x69, 0xFF,
         0x00
     ]);
 

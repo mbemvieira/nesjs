@@ -1,4 +1,3 @@
-export const zeroBinary = 0b0000_0000;
 export const signBitMask = 0b1000_0000;
 
 export const statusMasks = {
@@ -24,7 +23,6 @@ export const statusUnsetMasks = {
 };
 
 export default {
-    zeroBinary,
     signBitMask,
     statusMasks,
     statusUnsetMasks,
