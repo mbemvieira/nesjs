@@ -219,6 +219,7 @@ export default class CPU {
         const instructionBCC = (opcode) => this.#instructionBCC.call(this, opcode);
         const instructionBCS = (opcode) => this.#instructionBCS.call(this, opcode);
         const instructionBEQ = (opcode) => this.#instructionBEQ.call(this, opcode);
+        const instructionBIT = (opcode) => this.#instructionBIT.call(this, opcode);
         const instructionBMI = (opcode) => this.#instructionBMI.call(this, opcode);
         const instructionBNE = (opcode) => this.#instructionBNE.call(this, opcode);
         const instructionBPL = (opcode) => this.#instructionBPL.call(this, opcode);
@@ -257,6 +258,10 @@ export default class CPU {
         this.#instructionSet.set(0x90, new Opcode(0x90, 'BCC', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBCC));
         this.#instructionSet.set(0xB0, new Opcode(0xB0, 'BCS', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBCS));
         this.#instructionSet.set(0xF0, new Opcode(0xF0, 'BEQ', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBEQ));
+
+        this.#instructionSet.set(0x24, new Opcode(0x24, 'BIT', 2, 3, addressingModes.zeroPage, instructionBIT));
+        this.#instructionSet.set(0x2C, new Opcode(0x2C, 'BIT', 3, 4, addressingModes.absolute, instructionBIT));
+
         this.#instructionSet.set(0x30, new Opcode(0x30, 'BMI', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBMI));
         this.#instructionSet.set(0xD0, new Opcode(0xD0, 'BNE', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBNE));
         this.#instructionSet.set(0x10, new Opcode(0x10, 'BPL', 2, 2/*+1 if branch succeeds,+2 if to a new page*/, addressingModes.relative, instructionBPL));
@@ -451,7 +456,22 @@ export default class CPU {
     }
 
     #instructionBIT(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        let memoryValue = this.#memory.read(operandAddress);
+
+        if ((memoryValue & statusMasks.OVERFLOW) != 0) {
+            this.setOverflowFlag();
+        } else {
+            this.unsetOverflowFlag();
+        }
+
+        if ((memoryValue & statusMasks.NEGATIVE) != 0) {
+            this.setNegativeFlag();
+        } else {
+            this.unsetNegativeFlag();
+        }
+
+        this.#checkZeroFlag(this.getRegisterA() & memoryValue);
     }
 
     #instructionBMI(opcode) {

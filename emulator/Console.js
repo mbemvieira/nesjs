@@ -26,4 +26,8 @@ export default class Console {
     getCPU() {
         return this.#cpu;
     }
+
+    getMemory() {
+        return this.#memory;
+    }
 }
