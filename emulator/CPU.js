@@ -246,6 +246,9 @@ export default class CPU {
         const instructionCLD = () => this.#instructionCLD.call(this);
         const instructionCLI = () => this.#instructionCLI.call(this);
         const instructionCLV = () => this.#instructionCLV.call(this);
+        const instructionCMP = (opcode) => this.#instructionCMP.call(this, opcode);
+        const instructionCPX = (opcode) => this.#instructionCPX.call(this, opcode);
+        const instructionCPY = (opcode) => this.#instructionCPY.call(this, opcode);
         const instructionINX = () => this.#instructionINX.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
         const instructionSEC = () => this.#instructionSEC.call(this);
@@ -298,6 +301,23 @@ export default class CPU {
         this.#instructionSet.set(0xD8, new Opcode(0xD8, 'CLD', 1, 2, addressingModes.none, instructionCLD));
         this.#instructionSet.set(0x58, new Opcode(0x58, 'CLI', 1, 2, addressingModes.none, instructionCLI));
         this.#instructionSet.set(0xB8, new Opcode(0xB8, 'CLV', 1, 2, addressingModes.none, instructionCLV));
+
+        this.#instructionSet.set(0xC9, new Opcode(0xC9, 'CMP', 2, 2, addressingModes.immediate, instructionCMP));
+        this.#instructionSet.set(0xC5, new Opcode(0xC5, 'CMP', 2, 3, addressingModes.zeroPage, instructionCMP));
+        this.#instructionSet.set(0xD5, new Opcode(0xD5, 'CMP', 2, 4, addressingModes.zeroPageX, instructionCMP));
+        this.#instructionSet.set(0xCD, new Opcode(0xCD, 'CMP', 3, 4, addressingModes.absolute, instructionCMP));
+        this.#instructionSet.set(0xDD, new Opcode(0xDD, 'CMP', 3, 4, addressingModes.absoluteX/*+1 if page crossed*/, instructionCMP));
+        this.#instructionSet.set(0xD9, new Opcode(0xD9, 'CMP', 3, 4, addressingModes.absoluteY/*+1 if page crossed*/, instructionCMP));
+        this.#instructionSet.set(0xC1, new Opcode(0xC1, 'CMP', 2, 6, addressingModes.indirectX, instructionCMP));
+        this.#instructionSet.set(0xD1, new Opcode(0xD1, 'CMP', 2, 5, addressingModes.indirectY/*+1 if page crossed*/, instructionCMP));
+
+        this.#instructionSet.set(0xE0, new Opcode(0xE0, 'CPX', 2, 2, addressingModes.immediate, instructionCPX));
+        this.#instructionSet.set(0xE4, new Opcode(0xE4, 'CPX', 2, 3, addressingModes.zeroPage, instructionCPX));
+        this.#instructionSet.set(0xEC, new Opcode(0xEC, 'CPX', 3, 4, addressingModes.absolute, instructionCPX));
+
+        this.#instructionSet.set(0xC0, new Opcode(0xC0, 'CPY', 2, 2, addressingModes.immediate, instructionCPY));
+        this.#instructionSet.set(0xC4, new Opcode(0xC4, 'CPY', 2, 3, addressingModes.zeroPage, instructionCPY));
+        this.#instructionSet.set(0xCC, new Opcode(0xCC, 'CPY', 3, 4, addressingModes.absolute, instructionCPY));
 
         this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, addressingModes.none, instructionINX));
 
@@ -557,15 +577,42 @@ export default class CPU {
     }
 
     #instructionCMP(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const memoryValue = this.#memory.read(operandAddress);
+        const result = this.getRegisterA() - memoryValue;
+
+        if (result >= 0) {
+            this.setCarryFlag();
+        }
+
+        this.#checkZeroFlag(result);
+        this.#checkNegativeFlag(result);
     }
 
     #instructionCPX(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const memoryValue = this.#memory.read(operandAddress);
+        const result = this.getRegisterX() - memoryValue;
+
+        if (result >= 0) {
+            this.setCarryFlag();
+        }
+
+        this.#checkZeroFlag(result);
+        this.#checkNegativeFlag(result);
     }
 
     #instructionCPY(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const memoryValue = this.#memory.read(operandAddress);
+        const result = this.getRegisterY() - memoryValue;
+
+        if (result >= 0) {
+            this.setCarryFlag();
+        }
+
+        this.#checkZeroFlag(result);
+        this.#checkNegativeFlag(result);
     }
 
     #instructionDEC(opcode) {
@@ -783,10 +830,10 @@ export default class CPU {
 
     #checkNegativeFlag(value) {
         // Check sign bit. if 1 then negative else positive
-        if ((value & signBitMask) === 0) {
-            this.clearNegativeFlag();
-        } else {
+        if ((value & signBitMask) === signBitMask) {
             this.setNegativeFlag();
+        } else {
+            this.clearNegativeFlag();
         }
     }
 }
