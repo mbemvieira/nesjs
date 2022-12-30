@@ -1,6 +1,7 @@
 import Console from "../../emulator/Console.js";
+import { statusMasks as mask } from "../../emulator/masks.js";
 
-test('INX-0xE8: increment multiple times', () => {
+test('INX-0xE8: multiple increments', () => {
     let program = new Uint8Array([
         0xE8,
         0xE8,
@@ -14,10 +15,10 @@ test('INX-0xE8: increment multiple times', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterX()).toBe(0x03);
-    expect(cpu.getStatus()).toBe(0b0010_0100);
+    expect(cpu.getStatus()).toBe(cpu.STATUS_RESET);
 });
 
-test('INX-0xE8: overflow and zero flag', () => {
+test('INX-0xE8: zero', () => {
     let program = new Uint8Array([
         0xE8,
         0x00
@@ -30,7 +31,7 @@ test('INX-0xE8: overflow and zero flag', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterX()).toBe(0x00);
-    expect(cpu.getStatus()).toBe(0b0010_0110);
+    expect(cpu.getStatus()).toBe(cpu.STATUS_RESET | mask.ZERO);
 });
 
 test('INX-0xE8: negative flag', () => {
@@ -46,5 +47,5 @@ test('INX-0xE8: negative flag', () => {
     nesConsole.start();
 
     expect(cpu.getRegisterX()).toBe(0x80);
-    expect(cpu.getStatus()).toBe(0b1010_0100);
+    expect(cpu.getStatus()).toBe(cpu.STATUS_RESET | mask.NEGATIVE);
 });
