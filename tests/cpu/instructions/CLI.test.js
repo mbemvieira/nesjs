@@ -1,5 +1,5 @@
-import Console from "../../emulator/Console.js";
-import { statusMasks as mask } from "../../emulator/masks.js";
+import Console from "../../../emulator/Console.js";
+import { statusMasks as mask } from "../../../emulator/masks.js";
 
 test('CLI-0x58', () => {
     let program = new Uint8Array([

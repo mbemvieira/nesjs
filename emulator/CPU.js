@@ -249,6 +249,10 @@ export default class CPU {
         const instructionCMP = (opcode) => this.#instructionCMP.call(this, opcode);
         const instructionCPX = (opcode) => this.#instructionCPX.call(this, opcode);
         const instructionCPY = (opcode) => this.#instructionCPY.call(this, opcode);
+        const instructionDEC = (opcode) => this.#instructionDEC.call(this, opcode);
+        const instructionDEX = () => this.#instructionDEX.call(this);
+        const instructionDEY = () => this.#instructionDEY.call(this);
+        const instructionEOR = (opcode) => this.#instructionEOR.call(this, opcode);
         const instructionINX = () => this.#instructionINX.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
         const instructionSEC = () => this.#instructionSEC.call(this);
@@ -318,6 +322,24 @@ export default class CPU {
         this.#instructionSet.set(0xC0, new Opcode(0xC0, 'CPY', 2, 2, addressingModes.immediate, instructionCPY));
         this.#instructionSet.set(0xC4, new Opcode(0xC4, 'CPY', 2, 3, addressingModes.zeroPage, instructionCPY));
         this.#instructionSet.set(0xCC, new Opcode(0xCC, 'CPY', 3, 4, addressingModes.absolute, instructionCPY));
+
+        this.#instructionSet.set(0xC6, new Opcode(0xC6, 'DEC', 2, 5, addressingModes.zeroPage, instructionDEC));
+        this.#instructionSet.set(0xD6, new Opcode(0xD6, 'DEC', 2, 6, addressingModes.zeroPageX, instructionDEC));
+        this.#instructionSet.set(0xCE, new Opcode(0xCE, 'DEC', 3, 6, addressingModes.absolute, instructionDEC));
+        this.#instructionSet.set(0xDE, new Opcode(0xDE, 'DEC', 3, 7, addressingModes.absoluteX, instructionDEC));
+
+        this.#instructionSet.set(0xCA, new Opcode(0xCA, 'DEX', 1, 2, addressingModes.none, instructionDEX));
+
+        this.#instructionSet.set(0x88, new Opcode(0x88, 'DEY', 1, 2, addressingModes.none, instructionDEY));
+
+        this.#instructionSet.set(0x49, new Opcode(0x49, 'EOR', 2, 2, addressingModes.immediate, instructionEOR));
+        this.#instructionSet.set(0x45, new Opcode(0x45, 'EOR', 2, 3, addressingModes.zeroPage, instructionEOR));
+        this.#instructionSet.set(0x55, new Opcode(0x55, 'EOR', 2, 4, addressingModes.zeroPageX, instructionEOR));
+        this.#instructionSet.set(0x4D, new Opcode(0x4D, 'EOR', 3, 4, addressingModes.absolute, instructionEOR));
+        this.#instructionSet.set(0x5D, new Opcode(0x5D, 'EOR', 3, 4/*+1 if page crossed*/, addressingModes.absoluteX, instructionEOR));
+        this.#instructionSet.set(0x59, new Opcode(0x59, 'EOR', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionEOR));
+        this.#instructionSet.set(0x41, new Opcode(0x41, 'EOR', 2, 6, addressingModes.indirectX, instructionEOR));
+        this.#instructionSet.set(0x51, new Opcode(0x51, 'EOR', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionEOR));
 
         this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, addressingModes.none, instructionINX));
 
@@ -454,12 +476,12 @@ export default class CPU {
 
     #instructionAND(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
-        const value = this.#memory.read(operandAddress);
+        const memoryValue = this.#memory.read(operandAddress);
+        const result = this.getRegisterA() & memoryValue;
 
-        this.setRegisterA(this.getRegisterA() & value);
-
-        this.#checkZeroFlag(this.getRegisterA());
-        this.#checkNegativeFlag(this.getRegisterA());
+        this.setRegisterA(result);
+        this.#checkZeroFlag(result);
+        this.#checkNegativeFlag(result);
     }
 
     #instructionASL(opcode) {
@@ -616,19 +638,45 @@ export default class CPU {
     }
 
     #instructionDEC(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        let memoryValue = this.#memory.read(operandAddress);
+
+        memoryValue -= 1;
+
+        this.#memory.write(operandAddress, memoryValue);
+
+        this.#checkZeroFlag(memoryValue);
+        this.#checkNegativeFlag(memoryValue);
     }
 
-    #instructionDEX(opcode) {
-        // TODO
+    #instructionDEX() {
+        let registerValue = this.getRegisterX();
+
+        registerValue -= 1;
+
+        this.setRegisterX(registerValue);
+        this.#checkZeroFlag(registerValue);
+        this.#checkNegativeFlag(registerValue);
     }
 
-    #instructionDEY(opcode) {
-        // TODO
+    #instructionDEY() {
+        let registerValue = this.getRegisterY();
+
+        registerValue -= 1;
+
+        this.setRegisterY(registerValue);
+        this.#checkZeroFlag(registerValue);
+        this.#checkNegativeFlag(registerValue);
     }
 
     #instructionEOR(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const memoryValue = this.#memory.read(operandAddress);
+        const result = this.getRegisterA() ^ memoryValue;
+
+        this.setRegisterA(result);
+        this.#checkZeroFlag(result);
+        this.#checkNegativeFlag(result);
     }
 
     #instructionINC(opcode) {

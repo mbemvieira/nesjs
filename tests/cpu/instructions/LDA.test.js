@@ -1,5 +1,5 @@
-import Console from "../../emulator/Console.js";
-import { statusMasks as mask } from "../../emulator/masks.js";
+import Console from "../../../emulator/Console.js";
+import { statusMasks as mask } from "../../../emulator/masks.js";
 
 test('LDA-0xA9: load negative number', () => {
     let program = new Uint8Array([

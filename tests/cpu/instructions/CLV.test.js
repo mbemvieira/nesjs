@@ -1,16 +1,16 @@
-import Console from "../../emulator/Console.js";
-import { statusMasks as mask } from "../../emulator/masks.js";
+import Console from "../../../emulator/Console.js";
+import { statusMasks as mask } from "../../../emulator/masks.js";
 
-test('CLD-0xD8', () => {
+test('CLV-0xB8', () => {
     let program = new Uint8Array([
-        0xD8,
+        0xB8,
         0x00
     ]);
 
     const nesConsole = new Console(program);
     const cpu = nesConsole.getCPU();
 
-    cpu.setStatus(cpu.STATUS_RESET | mask.DECIMAL);
+    cpu.setStatus(cpu.STATUS_RESET | mask.OVERFLOW);
 
     nesConsole.start();
 
