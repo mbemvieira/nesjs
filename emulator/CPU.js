@@ -253,7 +253,9 @@ export default class CPU {
         const instructionDEX = () => this.#instructionDEX.call(this);
         const instructionDEY = () => this.#instructionDEY.call(this);
         const instructionEOR = (opcode) => this.#instructionEOR.call(this, opcode);
+        const instructionINC = (opcode) => this.#instructionINC.call(this, opcode);
         const instructionINX = () => this.#instructionINX.call(this);
+        const instructionINY = () => this.#instructionINY.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
         const instructionSEC = () => this.#instructionSEC.call(this);
         const instructionSED = () => this.#instructionSED.call(this);
@@ -329,7 +331,6 @@ export default class CPU {
         this.#instructionSet.set(0xDE, new Opcode(0xDE, 'DEC', 3, 7, addressingModes.absoluteX, instructionDEC));
 
         this.#instructionSet.set(0xCA, new Opcode(0xCA, 'DEX', 1, 2, addressingModes.none, instructionDEX));
-
         this.#instructionSet.set(0x88, new Opcode(0x88, 'DEY', 1, 2, addressingModes.none, instructionDEY));
 
         this.#instructionSet.set(0x49, new Opcode(0x49, 'EOR', 2, 2, addressingModes.immediate, instructionEOR));
@@ -341,7 +342,13 @@ export default class CPU {
         this.#instructionSet.set(0x41, new Opcode(0x41, 'EOR', 2, 6, addressingModes.indirectX, instructionEOR));
         this.#instructionSet.set(0x51, new Opcode(0x51, 'EOR', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionEOR));
 
+        this.#instructionSet.set(0xE6, new Opcode(0xE6, 'INC', 2, 5, addressingModes.zeroPage, instructionINC));
+        this.#instructionSet.set(0xF6, new Opcode(0xF6, 'INC', 2, 6, addressingModes.zeroPageX, instructionINC));
+        this.#instructionSet.set(0xEE, new Opcode(0xEE, 'INC', 3, 6, addressingModes.absolute, instructionINC));
+        this.#instructionSet.set(0xFE, new Opcode(0xFE, 'INC', 3, 7, addressingModes.absoluteX, instructionINC));
+
         this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, addressingModes.none, instructionINX));
+        this.#instructionSet.set(0xC8, new Opcode(0xC8, 'INY', 1, 2, addressingModes.none, instructionINY));
 
         this.#instructionSet.set(0xA9, new Opcode(0xA9, 'LDA', 2, 2, addressingModes.immediate, instructionLDA));
         this.#instructionSet.set(0xA5, new Opcode(0xA5, 'LDA', 2, 3, addressingModes.zeroPage, instructionLDA));
@@ -454,7 +461,7 @@ export default class CPU {
 
         result.setUint8(0, sum);
 
-        // If both terms have equal signs but the sum has a different sign, then overflow is set.
+        // If both terms have equal signs but the sum's sign is different, then overflow is set.
         // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         if (
             (
