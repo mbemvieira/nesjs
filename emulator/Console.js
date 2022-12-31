@@ -3,6 +3,7 @@ import Memory from "./Memory.js";
 
 export default class Console {
     MEMORY_SIZE = 0x1_0000;
+    PC_START = 0x8000;
 
     #cpu;
     #memory;
@@ -13,8 +14,8 @@ export default class Console {
         this.#cpu = new CPU(this.#memory);
         this.#program = program;
 
-        this.#memory.copy(this.#program, 0x8000);
-        this.#memory.writeWord(0xFFFC, 0x8000);
+        this.#memory.copy(this.#program, this.PC_START);
+        this.#memory.writeWord(this.#cpu.PC_RESET, this.PC_START);
 
         this.#cpu.reset();
     }

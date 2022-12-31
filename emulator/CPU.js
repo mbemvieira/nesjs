@@ -141,6 +141,31 @@ export default class CPU {
         return this.#stackPointer.setUint8(0, this.getStackPointer() - 1);
     }
 
+    pushStack(value) {
+        this.#memory.write(this.STACK_BASE + this.getStackPointer(), value);
+        this.decStackPointer();
+    }
+
+    pushWordStack(value) {
+        const hi = value >> 8;
+        const lo = value & 0xFF;
+
+        this.pushStack(hi);
+        this.pushStack(lo);
+    }
+
+    popStack() {
+        this.incStackPointer();
+        return this.#memory.read(this.STACK_BASE + this.getStackPointer());
+    }
+
+    popWordStack() {
+        const lo = this.popStack();
+        const hi = this.popStack();
+
+        return (hi << 8) | (lo);
+    }
+
     setStatus(value) {
         this.#status.setUint8(0, value);
     }
@@ -256,6 +281,8 @@ export default class CPU {
         const instructionINC = (opcode) => this.#instructionINC.call(this, opcode);
         const instructionINX = () => this.#instructionINX.call(this);
         const instructionINY = () => this.#instructionINY.call(this);
+        const instructionJMP = (opcode) => this.#instructionJMP.call(this, opcode);
+        const instructionJSR = () => this.#instructionJSR.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
         const instructionSEC = () => this.#instructionSEC.call(this);
         const instructionSED = () => this.#instructionSED.call(this);
@@ -349,6 +376,11 @@ export default class CPU {
 
         this.#instructionSet.set(0xE8, new Opcode(0xE8, 'INX', 1, 2, addressingModes.none, instructionINX));
         this.#instructionSet.set(0xC8, new Opcode(0xC8, 'INY', 1, 2, addressingModes.none, instructionINY));
+
+        this.#instructionSet.set(0x4C, new Opcode(0x4C, 'JMP', 3, 3, addressingModes.absolute, instructionJMP));
+        this.#instructionSet.set(0x6C, new Opcode(0x6C, 'JMP', 3, 5, addressingModes.indirect, instructionJMP));
+
+        this.#instructionSet.set(0x20, new Opcode(0x20, 'JSR', 3, 6, addressingModes.absolute, instructionJSR));
 
         this.#instructionSet.set(0xA9, new Opcode(0xA9, 'LDA', 2, 2, addressingModes.immediate, instructionLDA));
         this.#instructionSet.set(0xA5, new Opcode(0xA5, 'LDA', 2, 3, addressingModes.zeroPage, instructionLDA));
@@ -662,6 +694,7 @@ export default class CPU {
         registerValue -= 1;
 
         this.setRegisterX(registerValue);
+
         this.#checkZeroFlag(registerValue);
         this.#checkNegativeFlag(registerValue);
     }
@@ -672,6 +705,7 @@ export default class CPU {
         registerValue -= 1;
 
         this.setRegisterY(registerValue);
+
         this.#checkZeroFlag(registerValue);
         this.#checkNegativeFlag(registerValue);
     }
@@ -682,6 +716,7 @@ export default class CPU {
         const result = this.getRegisterA() ^ memoryValue;
 
         this.setRegisterA(result);
+
         this.#checkZeroFlag(result);
         this.#checkNegativeFlag(result);
     }
@@ -713,41 +748,67 @@ export default class CPU {
     }
 
     #instructionJMP(opcode) {
-        // TODO
+        const memoryAddress = this.#memory.readWord(this.getProgramCounter());
+
+        if (opcode.mode === addressingModes.absolute) {
+            this.setProgramCounter(memoryAddress);
+            return;
+        }
+
+        let indirectAddress;
+
+        // if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
+        // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
+        // i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
+        if ((memoryAddress & 0x00FF) === 0x00FF) {
+            const lo = this.#memory.read(memoryAddress);
+            const hi = this.#memory.read(memoryAddress & 0xFF00);
+
+            indirectAddress = (hi << 8) | (lo);
+        } else {
+            indirectAddress = this.#memory.readWord(memoryAddress);
+        }
+
+        this.setProgramCounter(indirectAddress);
     }
 
-    #instructionJSR(opcode) {
-        // TODO
+    #instructionJSR() {
+        // return point: next instruction - 1
+        this.pushWordStack(this.getProgramCounter() + 2 - 1);
+
+        const memoryAddress = this.#memory.readWord(this.getProgramCounter());
+
+        this.setProgramCounter(memoryAddress);
     }
 
     #instructionLDA(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
-        const value = this.#memory.read(operandAddress);
+        const memoryValue = this.#memory.read(operandAddress);
 
-        this.setRegisterA(value);
+        this.setRegisterA(memoryValue);
 
-        this.#checkZeroFlag(this.getRegisterA());
-        this.#checkNegativeFlag(this.getRegisterA());
+        this.#checkZeroFlag(memoryValue);
+        this.#checkNegativeFlag(memoryValue);
     }
 
     #instructionLDX(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
-        const value = this.#memory.read(operandAddress);
+        const memoryValue = this.#memory.read(operandAddress);
 
-        this.setRegisterX(value);
+        this.setRegisterX(memoryValue);
 
-        this.#checkZeroFlag(this.getRegisterX());
-        this.#checkNegativeFlag(this.getRegisterX());
+        this.#checkZeroFlag(memoryValue);
+        this.#checkNegativeFlag(memoryValue);
     }
 
     #instructionLDY(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
-        const value = this.#memory.read(operandAddress);
+        const memoryValue = this.#memory.read(operandAddress);
 
-        this.setRegisterY(value);
+        this.setRegisterY(memoryValue);
 
-        this.#checkZeroFlag(this.getRegisterY());
-        this.#checkNegativeFlag(this.getRegisterY());
+        this.#checkZeroFlag(memoryValue);
+        this.#checkNegativeFlag(memoryValue);
     }
 
     #instructionLSR(opcode) {
