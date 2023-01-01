@@ -1,6 +1,8 @@
 import Opcode from "./Opcode.js";
 import addressingModes from "./addressingModes.js";
 import { signBitMask, statusMasks, statusUnsetMasks } from "./masks.js";
+import Binary8 from "./Binary8.js";
+import Binary16 from "./Binary16.js";
 
 export default class CPU {
     PC_RESET = 0xFFFC;
@@ -35,19 +37,16 @@ export default class CPU {
     constructor(memory) {
         this.#memory = memory;
 
-        this.#programCounter = new DataView(new ArrayBuffer(2));
-        this.#stackPointer = new DataView(new ArrayBuffer(1));
-        this.#status = new DataView(new ArrayBuffer(1));
+        this.#programCounter = new Binary16();
+        this.#stackPointer = new Binary8();
+        this.#status = new Binary8();
 
-        this.#registerA = new DataView(new ArrayBuffer(1));
-        this.#registerX = new DataView(new ArrayBuffer(1));
-        this.#registerY = new DataView(new ArrayBuffer(1));
+        this.#registerA = new Binary8();
+        this.#registerX = new Binary8();
+        this.#registerY = new Binary8();
 
         this.#instructionSet = new Map();
-
-        this.reset();
-
-        this.#initOpcodes();
+        this.#initInstructions();
     }
 
     reset() {
@@ -66,79 +65,79 @@ export default class CPU {
     }
 
     getProgramCounter() {
-        return this.#programCounter.getUint16();
+        return this.#programCounter.get();
     }
 
     getStackPointer() {
-        return this.#stackPointer.getUint8(0);
+        return this.#stackPointer.get();
     }
 
     getStatus() {
-        return this.#status.getUint8(0);
+        return this.#status.get();
     }
 
     isCarryFlagClear() {
-        return (this.#status.getUint8(0) & statusMasks.CARRY) === 0;
+        return (this.#status.get() & statusMasks.CARRY) === 0;
     }
 
     isCarryFlagSet() {
-        return (this.#status.getUint8(0) & statusMasks.CARRY) === statusMasks.CARRY;
+        return (this.#status.get() & statusMasks.CARRY) === statusMasks.CARRY;
     }
 
     isZeroFlagClear() {
-        return (this.#status.getUint8(0) & statusMasks.ZERO) === 0;
+        return (this.#status.get() & statusMasks.ZERO) === 0;
     }
 
     isZeroFlagSet() {
-        return (this.#status.getUint8(0) & statusMasks.ZERO) === statusMasks.ZERO;
+        return (this.#status.get() & statusMasks.ZERO) === statusMasks.ZERO;
     }
 
     isOverflowFlagClear() {
-        return (this.#status.getUint8(0) & statusMasks.OVERFLOW) === 0;
+        return (this.#status.get() & statusMasks.OVERFLOW) === 0;
     }
 
     isOverflowFlagSet() {
-        return (this.#status.getUint8(0) & statusMasks.OVERFLOW) === statusMasks.OVERFLOW;
+        return (this.#status.get() & statusMasks.OVERFLOW) === statusMasks.OVERFLOW;
     }
 
     isNegativeFlagClear() {
-        return (this.#status.getUint8(0) & statusMasks.NEGATIVE) === 0;
+        return (this.#status.get() & statusMasks.NEGATIVE) === 0;
     }
 
     isNegativeFlagSet() {
-        return (this.#status.getUint8(0) & statusMasks.NEGATIVE) === statusMasks.NEGATIVE;
+        return (this.#status.get() & statusMasks.NEGATIVE) === statusMasks.NEGATIVE;
     }
 
     getRegisterA() {
-        return this.#registerA.getUint8(0);
+        return this.#registerA.get();
     }
 
     getRegisterX() {
-        return this.#registerX.getUint8(0);
+        return this.#registerX.get();
     }
 
     getRegisterY() {
-        return this.#registerY.getUint8(0);
+        return this.#registerY.get();
     }
 
     setProgramCounter(value) {
-        this.#programCounter.setUint16(0, value);
+        this.#programCounter.set(value);
     }
 
     incProgramCounter() {
-        this.#programCounter.setUint16(0, this.getProgramCounter() + 1);
+        this.#programCounter.increment();
     }
 
     setStackPointer(value) {
-        return this.#stackPointer.setUint8(0, value);
+        return this.#stackPointer.set(value);
     }
 
     incStackPointer() {
-        return this.#stackPointer.setUint8(0, this.getStackPointer() + 1);
+        return this.#stackPointer.increment();
     }
 
     decStackPointer() {
-        return this.#stackPointer.setUint8(0, this.getStackPointer() - 1);
+        return this.#stackPointer.decrement();
     }
 
     pushStack(value) {
@@ -167,7 +166,7 @@ export default class CPU {
     }
 
     setStatus(value) {
-        this.#status.setUint8(0, value);
+        this.#status.set(value);
     }
 
     setCarryFlag() {
@@ -219,15 +218,15 @@ export default class CPU {
     }
 
     setRegisterA(value) {
-        return this.#registerA.setUint8(0, value);
+        return this.#registerA.set(value);
     }
 
     setRegisterX(value) {
-        return this.#registerX.setUint8(0, value);
+        return this.#registerX.set(value);
     }
 
     setRegisterY(value) {
-        return this.#registerY.setUint8(0, value);
+        return this.#registerY.set(value);
     }
 
     run() {
@@ -252,7 +251,7 @@ export default class CPU {
         }
     }
 
-    #initOpcodes() {
+    #initInstructions() {
         const instructionADC = (opcode) => this.#instructionADC.call(this, opcode);
         const instructionAND = (opcode) => this.#instructionAND.call(this, opcode);
         const instructionASLAccumulator = () => this.#instructionASLAccumulator.call(this);
@@ -421,19 +420,17 @@ export default class CPU {
         }
 
         if (addressingMode === addressingModes.zeroPageX) {
-            let operand = new DataView(new ArrayBuffer(1));
+            const memoryValue = this.#memory.read(this.getProgramCounter());
+            const operand = new Binary8(memoryValue + this.getRegisterX());
 
-            operand.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterX());
-
-            return operand.getUint8(0);
+            return operand.get();
         }
 
         if (addressingMode === addressingModes.zeroPageY) {
-            let operand = new DataView(new ArrayBuffer(1));
+            const memoryValue = this.#memory.read(this.getProgramCounter());
+            const operand = new Binary8(memoryValue + this.getRegisterY());
 
-            operand.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterY());
-
-            return operand.getUint8(0);
+            return operand.get();
         }
 
         if (addressingMode === addressingModes.absolute) {
@@ -441,35 +438,50 @@ export default class CPU {
         }
 
         if (addressingMode === addressingModes.absoluteX) {
-            let operand = new DataView(new ArrayBuffer(2));
+            const memoryValue = this.#memory.readWord(this.getProgramCounter());
+            const operand = new Binary16(memoryValue + this.getRegisterX());
 
-            operand.setUint16(0, this.#memory.readWord(this.getProgramCounter()) + this.getRegisterX());
-
-            return operand.getUint16();
+            return operand.get();
         }
 
         if (addressingMode === addressingModes.absoluteY) {
-            let operand = new DataView(new ArrayBuffer(2));
+            const memoryValue = this.#memory.readWord(this.getProgramCounter());
+            const operand = new Binary16(memoryValue + this.getRegisterY());
 
-            operand.setUint16(0, this.#memory.readWord(this.getProgramCounter()) + this.getRegisterY());
+            return operand.get();
+        }
 
-            return operand.getUint16();
+        if (addressingMode === addressingModes.indirect) {
+            const memoryAddress = this.#memory.readWord(this.getProgramCounter());
+            let indirectAddress;
+
+            // if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
+            // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
+            // i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
+            if ((memoryAddress & 0x00FF) === 0x00FF) {
+                const lo = this.#memory.read(memoryAddress);
+                const hi = this.#memory.read(memoryAddress & 0xFF00);
+
+                indirectAddress = (hi << 8) | (lo);
+            } else {
+                indirectAddress = this.#memory.readWord(memoryAddress);
+            }
+
+            return indirectAddress;
         }
 
         if (addressingMode === addressingModes.indirectX) {
-            let pointer = new DataView(new ArrayBuffer(1));
+            const memoryValue = this.#memory.read(this.getProgramCounter());
+            const pointer = new Binary8(memoryValue + this.getRegisterX());
 
-            pointer.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterX());
-
-            return this.#memory.readWord(pointer.getUint8(0));
+            return this.#memory.readWord(pointer.get());
         }
 
         if (addressingMode === addressingModes.indirectY) {
-            let pointer = new DataView(new ArrayBuffer(1));
+            const memoryValue = this.#memory.read(this.getProgramCounter());
+            const pointer = new Binary8(memoryValue + this.getRegisterY());
 
-            pointer.setUint8(0, this.#memory.read(this.getProgramCounter()) + this.getRegisterY());
-
-            return this.#memory.readWord(pointer.getUint8(0));
+            return this.#memory.readWord(pointer.get());
         }
 
         return;
@@ -489,16 +501,14 @@ export default class CPU {
             this.setCarryFlag();
         }
 
-        const result = new DataView(new ArrayBuffer(1));
-
-        result.setUint8(0, sum);
+        const result = new Binary8(sum);
 
         // If both terms have equal signs but the sum's sign is different, then overflow is set.
         // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
         if (
             (
-                (result.getUint8(0) ^ this.getRegisterA()) &
-                (result.getUint8(0) ^ value) &
+                (result.get() ^ this.getRegisterA()) &
+                (result.get() ^ value) &
                 signBitMask
             ) != 0
         ) {
@@ -507,7 +517,7 @@ export default class CPU {
             this.clearOverflowFlag();
         }
 
-        this.setRegisterA(result.getUint8(0));
+        this.setRegisterA(result.get());
 
         this.#checkZeroFlag(this.getRegisterA());
         this.#checkNegativeFlag(this.getRegisterA());
@@ -689,25 +699,17 @@ export default class CPU {
     }
 
     #instructionDEX() {
-        let registerValue = this.getRegisterX();
+        this.setRegisterX(this.getRegisterX() - 1);
 
-        registerValue -= 1;
-
-        this.setRegisterX(registerValue);
-
-        this.#checkZeroFlag(registerValue);
-        this.#checkNegativeFlag(registerValue);
+        this.#checkZeroFlag(this.getRegisterX());
+        this.#checkNegativeFlag(this.getRegisterX());
     }
 
     #instructionDEY() {
-        let registerValue = this.getRegisterY();
+        this.setRegisterY(this.getRegisterY() - 1);
 
-        registerValue -= 1;
-
-        this.setRegisterY(registerValue);
-
-        this.#checkZeroFlag(registerValue);
-        this.#checkNegativeFlag(registerValue);
+        this.#checkZeroFlag(this.getRegisterY());
+        this.#checkNegativeFlag(this.getRegisterY());
     }
 
     #instructionEOR(opcode) {
@@ -748,28 +750,8 @@ export default class CPU {
     }
 
     #instructionJMP(opcode) {
-        const memoryAddress = this.#memory.readWord(this.getProgramCounter());
-
-        if (opcode.mode === addressingModes.absolute) {
-            this.setProgramCounter(memoryAddress);
-            return;
-        }
-
-        let indirectAddress;
-
-        // if address $3000 contains $40, $30FF contains $80, and $3100 contains $50,
-        // the result of JMP ($30FF) will be a transfer of control to $4080 rather than $5080 as you intended
-        // i.e. the 6502 took the low byte of the address from $30FF and the high byte from $3000
-        if ((memoryAddress & 0x00FF) === 0x00FF) {
-            const lo = this.#memory.read(memoryAddress);
-            const hi = this.#memory.read(memoryAddress & 0xFF00);
-
-            indirectAddress = (hi << 8) | (lo);
-        } else {
-            indirectAddress = this.#memory.readWord(memoryAddress);
-        }
-
-        this.setProgramCounter(indirectAddress);
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        this.setProgramCounter(operandAddress);
     }
 
     #instructionJSR() {
