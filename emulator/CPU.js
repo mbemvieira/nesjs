@@ -1,8 +1,9 @@
 import Opcode from "./Opcode.js";
-import addressingModes from "./addressingModes.js";
-import { signBitMask, statusMasks, statusUnsetMasks } from "./masks.js";
 import Binary8 from "./Binary8.js";
 import Binary16 from "./Binary16.js";
+import addressingModes from "./addressingModes.js";
+import { signBitMask, statusMasks, statusUnsetMasks } from "./masks.js";
+import { twosComplement } from "./helpers.js";
 
 export default class CPU {
     PC_RESET = 0xFFFC;
@@ -146,7 +147,7 @@ export default class CPU {
     }
 
     pushWordStack(value) {
-        const hi = value >> 8;
+        const hi = value >>> 8;
         const lo = value & 0xFF;
 
         this.pushStack(hi);
@@ -254,7 +255,6 @@ export default class CPU {
     #initInstructions() {
         const instructionADC = (opcode) => this.#instructionADC.call(this, opcode);
         const instructionAND = (opcode) => this.#instructionAND.call(this, opcode);
-        const instructionASLAccumulator = () => this.#instructionASLAccumulator.call(this);
         const instructionASL = (opcode) => this.#instructionASL.call(this, opcode);
         const instructionBCC = (opcode) => this.#instructionBCC.call(this, opcode);
         const instructionBCS = (opcode) => this.#instructionBCS.call(this, opcode);
@@ -283,11 +283,32 @@ export default class CPU {
         const instructionJMP = (opcode) => this.#instructionJMP.call(this, opcode);
         const instructionJSR = () => this.#instructionJSR.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
+        const instructionLDX = (opcode) => this.#instructionLDX.call(this, opcode);
+        const instructionLDY = (opcode) => this.#instructionLDY.call(this, opcode);
+        const instructionLSR = (opcode) => this.#instructionLSR.call(this, opcode);
+        const instructionNOP = (opcode) => this.#instructionNOP.call(this, opcode);
+        const instructionORA = (opcode) => this.#instructionORA.call(this, opcode);
+        const instructionPHA = (opcode) => this.#instructionPHA.call(this, opcode);
+        const instructionPHP = (opcode) => this.#instructionPHP.call(this, opcode);
+        const instructionPLA = (opcode) => this.#instructionPLA.call(this, opcode);
+        const instructionPLP = (opcode) => this.#instructionPLP.call(this, opcode);
+        const instructionROL = (opcode) => this.#instructionROL.call(this, opcode);
+        const instructionROR = (opcode) => this.#instructionROR.call(this, opcode);
+        const instructionRTI = (opcode) => this.#instructionRTI.call(this, opcode);
+        const instructionRTS = (opcode) => this.#instructionRTS.call(this, opcode);
+        const instructionSBC = (opcode) => this.#instructionSBC.call(this, opcode);
         const instructionSEC = () => this.#instructionSEC.call(this);
         const instructionSED = () => this.#instructionSED.call(this);
         const instructionSEI = () => this.#instructionSEI.call(this);
+        const instructionSTX = (opcode) => this.#instructionSTX.call(this, opcode);
+        const instructionSTY = (opcode) => this.#instructionSTY.call(this, opcode);
         const instructionSTA = (opcode) => this.#instructionSTA.call(this, opcode);
         const instructionTAX = () => this.#instructionTAX.call(this);
+        const instructionTAY = (opcode) => this.#instructionTAY.call(this, opcode);
+        const instructionTSX = (opcode) => this.#instructionTSX.call(this, opcode);
+        const instructionTXA = (opcode) => this.#instructionTXA.call(this, opcode);
+        const instructionTXS = (opcode) => this.#instructionTXS.call(this, opcode);
+        const instructionTYA = (opcode) => this.#instructionTYA.call(this, opcode);
 
         this.#instructionSet.set(0x69, new Opcode(0x69, 'ADC', 2, 2, addressingModes.immediate, instructionADC));
         this.#instructionSet.set(0x65, new Opcode(0x65, 'ADC', 2, 3, addressingModes.zeroPage, instructionADC));
@@ -307,7 +328,7 @@ export default class CPU {
         this.#instructionSet.set(0x21, new Opcode(0x21, 'AND', 2, 6, addressingModes.indirectX, instructionAND));
         this.#instructionSet.set(0x31, new Opcode(0x31, 'AND', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionAND));
 
-        this.#instructionSet.set(0x0A, new Opcode(0x0A, 'ASL', 1, 2, addressingModes.none, instructionASLAccumulator));
+        this.#instructionSet.set(0x0A, new Opcode(0x0A, 'ASL', 1, 2, addressingModes.accumulator, instructionASL));
         this.#instructionSet.set(0x06, new Opcode(0x06, 'ASL', 2, 5, addressingModes.zeroPage, instructionASL));
         this.#instructionSet.set(0x16, new Opcode(0x16, 'ASL', 2, 6, addressingModes.zeroPageX, instructionASL));
         this.#instructionSet.set(0x0E, new Opcode(0x0E, 'ASL', 3, 6, addressingModes.absolute, instructionASL));
@@ -390,6 +411,68 @@ export default class CPU {
         this.#instructionSet.set(0xA1, new Opcode(0xA1, 'LDA', 2, 6, addressingModes.indirectX, instructionLDA));
         this.#instructionSet.set(0xB1, new Opcode(0xB1, 'LDA', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionLDA));
 
+        this.#instructionSet.set(0xA2, new Opcode(0xA2, 'LDX', 2, 2, addressingModes.immediate, instructionLDX));
+        this.#instructionSet.set(0xA6, new Opcode(0xA6, 'LDX', 2, 3, addressingModes.zeroPage, instructionLDX));
+        this.#instructionSet.set(0xB6, new Opcode(0xB6, 'LDX', 2, 4, addressingModes.zeroPageY, instructionLDX));
+        this.#instructionSet.set(0xAE, new Opcode(0xAE, 'LDX', 3, 4, addressingModes.absolute, instructionLDX));
+        this.#instructionSet.set(0xBE, new Opcode(0xBE, 'LDX', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionLDX));
+
+        this.#instructionSet.set(0xA0, new Opcode(0xA0, 'LDY', 2, 2, addressingModes.immediate, instructionLDY));
+        this.#instructionSet.set(0xA4, new Opcode(0xA4, 'LDY', 2, 3, addressingModes.zeroPage, instructionLDY));
+        this.#instructionSet.set(0xB4, new Opcode(0xB4, 'LDY', 2, 4, addressingModes.zeroPageY, instructionLDY));
+        this.#instructionSet.set(0xAC, new Opcode(0xAC, 'LDY', 3, 4, addressingModes.absolute, instructionLDY));
+        this.#instructionSet.set(0xBC, new Opcode(0xBC, 'LDY', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionLDY));
+
+        this.#instructionSet.set(0x4A, new Opcode(0x4A, 'LSR', 1, 2, addressingModes.accumulator, instructionLSR));
+        this.#instructionSet.set(0x46, new Opcode(0x46, 'LSR', 2, 5, addressingModes.zeroPage, instructionLSR));
+        this.#instructionSet.set(0x56, new Opcode(0x56, 'LSR', 2, 6, addressingModes.zeroPageX, instructionLSR));
+        this.#instructionSet.set(0x4E, new Opcode(0x4E, 'LSR', 3, 6, addressingModes.absolute, instructionLSR));
+        this.#instructionSet.set(0x5E, new Opcode(0x5E, 'LSR', 3, 7, addressingModes.absoluteX, instructionLSR));
+
+        this.#instructionSet.set(0xEA, new Opcode(0xEA, 'NOP', 1, 2, addressingModes.none, instructionNOP));
+
+        this.#instructionSet.set(0x09, new Opcode(0x09, 'ORA', 2, 2, addressingModes.immediate, instructionORA));
+        this.#instructionSet.set(0x05, new Opcode(0x05, 'ORA', 2, 3, addressingModes.zeroPage, instructionORA));
+        this.#instructionSet.set(0x15, new Opcode(0x15, 'ORA', 2, 4, addressingModes.zeroPageX, instructionORA));
+        this.#instructionSet.set(0x0D, new Opcode(0x0D, 'ORA', 3, 4, addressingModes.absolute, instructionORA));
+        this.#instructionSet.set(0x1D, new Opcode(0x1D, 'ORA', 3, 4/*+1 if page crossed*/, addressingModes.absoluteX, instructionORA));
+        this.#instructionSet.set(0x19, new Opcode(0x19, 'ORA', 3, 4/*+1 if page crossed*/, addressingModes.absoluteY, instructionORA));
+        this.#instructionSet.set(0x01, new Opcode(0x01, 'ORA', 2, 6, addressingModes.indirectX, instructionORA));
+        this.#instructionSet.set(0x11, new Opcode(0x11, 'ORA', 2, 5/*+1 if page crossed*/, addressingModes.indirectY, instructionORA));
+
+        this.#instructionSet.set(0x48, new Opcode(0x48, 'PHA', 1, 3, addressingModes.none, instructionPHA));
+
+        this.#instructionSet.set(0x08, new Opcode(0x08, 'PHP', 1, 3, addressingModes.none, instructionPHP));
+        
+        this.#instructionSet.set(0x68, new Opcode(0x68, 'PLA', 1, 4, addressingModes.none, instructionPLA));
+
+        this.#instructionSet.set(0x28, new Opcode(0x28, 'PLP', 1, 4, addressingModes.none, instructionPLP));
+
+        this.#instructionSet.set(0x2A, new Opcode(0x2A, 'ROL', 1, 2, addressingModes.accumulator, instructionROL));
+        this.#instructionSet.set(0x26, new Opcode(0x26, 'ROL', 2, 5, addressingModes.zeroPage, instructionROL));
+        this.#instructionSet.set(0x36, new Opcode(0x36, 'ROL', 2, 6, addressingModes.zeroPageX, instructionROL));
+        this.#instructionSet.set(0x2E, new Opcode(0x2E, 'ROL', 3, 6, addressingModes.absolute, instructionROL));
+        this.#instructionSet.set(0x3E, new Opcode(0x3E, 'ROL', 3, 7, addressingModes.absoluteX, instructionROL));
+
+        this.#instructionSet.set(0x6A, new Opcode(0x6A, 'ROR', 1, 2, addressingModes.accumulator, instructionROR));
+        this.#instructionSet.set(0x66, new Opcode(0x66, 'ROR', 2, 5, addressingModes.zeroPage, instructionROR));
+        this.#instructionSet.set(0x76, new Opcode(0x76, 'ROR', 2, 6, addressingModes.zeroPageX, instructionROR));
+        this.#instructionSet.set(0x6E, new Opcode(0x6E, 'ROR', 3, 6, addressingModes.absolute, instructionROR));
+        this.#instructionSet.set(0x7E, new Opcode(0x7E, 'ROR', 3, 7, addressingModes.absoluteX, instructionROR));
+
+        this.#instructionSet.set(0x40, new Opcode(0x40, 'RTI', 1, 6, addressingModes.none, instructionRTI));
+        
+        this.#instructionSet.set(0x60, new Opcode(0x60, 'RTS', 1, 6, addressingModes.none, instructionRTS));
+
+        this.#instructionSet.set(0xE9, new Opcode(0xE9, 'SBC', 2, 2, addressingModes.immediate, instructionSBC));
+        this.#instructionSet.set(0xE5, new Opcode(0xE5, 'SBC', 2, 3, addressingModes.zeroPage, instructionSBC));
+        this.#instructionSet.set(0xF5, new Opcode(0xF5, 'SBC', 2, 4, addressingModes.zeroPageX, instructionSBC));
+        this.#instructionSet.set(0xED, new Opcode(0xED, 'SBC', 3, 4, addressingModes.absolute, instructionSBC));
+        this.#instructionSet.set(0xFD, new Opcode(0xFD, 'SBC', 3, 4, addressingModes.absoluteX, instructionSBC));
+        this.#instructionSet.set(0xF9, new Opcode(0xF9, 'SBC', 3, 4, addressingModes.absoluteY, instructionSBC));
+        this.#instructionSet.set(0xE1, new Opcode(0xE1, 'SBC', 2, 6, addressingModes.indirectX, instructionSBC));
+        this.#instructionSet.set(0xF1, new Opcode(0xF1, 'SBC', 2, 5, addressingModes.indirectY, instructionSBC));
+
         this.#instructionSet.set(0x38, new Opcode(0x38, 'SEC', 1, 2, addressingModes.none, instructionSEC));
         this.#instructionSet.set(0xF8, new Opcode(0xF8, 'SED', 1, 2, addressingModes.none, instructionSED));
         this.#instructionSet.set(0x78, new Opcode(0x78, 'SEI', 1, 2, addressingModes.none, instructionSEI));
@@ -402,7 +485,16 @@ export default class CPU {
         this.#instructionSet.set(0x81, new Opcode(0x85, 'STA', 2, 6, addressingModes.indirectX, instructionSTA));
         this.#instructionSet.set(0x91, new Opcode(0x85, 'STA', 2, 6, addressingModes.indirectY, instructionSTA));
 
+        this.#instructionSet.set(0x86, new Opcode(0x86, 'STX', 2, 3, addressingModes.zeroPage, instructionSTX));
+        this.#instructionSet.set(0x96, new Opcode(0x96, 'STX', 2, 4, addressingModes.zeroPageY, instructionSTX));
+        this.#instructionSet.set(0x8E, new Opcode(0x8E, 'STX', 3, 4, addressingModes.absolute, instructionSTX));
+
+        this.#instructionSet.set(0x84, new Opcode(0x84, 'STY', 2, 3, addressingModes.zeroPage, instructionSTY));
+        this.#instructionSet.set(0x94, new Opcode(0x94, 'STY', 2, 4, addressingModes.zeroPageX, instructionSTY));
+        this.#instructionSet.set(0x8C, new Opcode(0x8C, 'STY', 3, 4, addressingModes.absolute, instructionSTY));
+
         this.#instructionSet.set(0xAA, new Opcode(0xAA, 'TAX', 1, 2, addressingModes.none, instructionTAX));
+        this.#instructionSet.set(0xA8, new Opcode(0xA8, 'TAY', 1, 2, addressingModes.none, instructionTAY));
     }
 
     #getOperandAddress(addressingMode) {
@@ -484,14 +576,14 @@ export default class CPU {
             return this.#memory.readWord(pointer.get());
         }
 
-        return;
+        return null;
     }
 
     #instructionADC(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
-        const value = this.#memory.read(operandAddress);
+        const memoryValue = this.#memory.read(operandAddress);
 
-        let sum = this.getRegisterA() + value;
+        let sum = this.getRegisterA() + memoryValue;
 
         if (this.isCarryFlagSet()) {
             sum += 1;
@@ -503,19 +595,7 @@ export default class CPU {
 
         const result = new Binary8(sum);
 
-        // If both terms have equal signs but the sum's sign is different, then overflow is set.
-        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
-        if (
-            (
-                (result.get() ^ this.getRegisterA()) &
-                (result.get() ^ value) &
-                signBitMask
-            ) != 0
-        ) {
-            this.setOverflowFlag();
-        } else {
-            this.clearOverflowFlag();
-        }
+        this.#checkOverflowFlag(this.getRegisterA(), memoryValue, result.get());
 
         this.setRegisterA(result.get());
 
@@ -526,35 +606,34 @@ export default class CPU {
     #instructionAND(opcode) {
         const operandAddress = this.#getOperandAddress(opcode.mode);
         const memoryValue = this.#memory.read(operandAddress);
-        const result = this.getRegisterA() & memoryValue;
 
-        this.setRegisterA(result);
-        this.#checkZeroFlag(result);
-        this.#checkNegativeFlag(result);
+        this.setRegisterA(this.getRegisterA() & memoryValue);
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
     }
 
     #instructionASL(opcode) {
-        const operandAddress = this.#getOperandAddress(opcode.mode);
-        let value = this.#memory.read(operandAddress);
+        let value;
 
-        this.#checkCarryFlagASL(value);
+        if (opcode.mode === addressingModes.accumulator) {
+            value = this.getRegisterA();
 
-        value <<= 1;
+            this.#checkCarryFlagBit7(value);
 
-        this.#memory.write(operandAddress, value);
+            this.setRegisterA(value << 1);
 
-        this.#checkZeroFlag(value);
-        this.#checkNegativeFlag(value);
-    }
+            value = this.getRegisterA();
+        } else {
+            const operandAddress = this.#getOperandAddress(opcode.mode);
+            value = this.#memory.read(operandAddress);
 
-    #instructionASLAccumulator() {
-        let value = this.getRegisterA();
+            this.#checkCarryFlagBit7(value);
 
-        this.#checkCarryFlagASL(value);
+            this.#memory.write(operandAddress, value << 1);
 
-        value <<= 1;
-
-        this.setRegisterA(value);
+            value = this.#memory.read(operandAddress);
+        }
 
         this.#checkZeroFlag(value);
         this.#checkNegativeFlag(value);
@@ -794,51 +873,179 @@ export default class CPU {
     }
 
     #instructionLSR(opcode) {
-        // TODO
+        let value;
+
+        if (opcode.mode === addressingModes.accumulator) {
+            value = this.getRegisterA();
+
+            this.#checkCarryFlagBit0(value);
+
+            this.setRegisterA(value >>> 1);
+
+            value = this.getRegisterA();
+        } else {
+            const operandAddress = this.#getOperandAddress(opcode.mode);
+            value = this.#memory.read(operandAddress);
+
+            this.#checkCarryFlagBit0(value);
+
+            this.#memory.write(operandAddress, value >>> 1);
+
+            value = this.#memory.read(operandAddress);
+        }
+
+        this.#checkZeroFlag(value);
+        this.#checkNegativeFlag(value);
     }
 
-    #instructionNOP(opcode) {
-        // TODO
+    #instructionNOP() {
+        return;
     }
 
     #instructionORA(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const memoryValue = this.#memory.read(operandAddress);
+
+        this.setRegisterA(this.getRegisterA() | memoryValue);
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
     }
 
-    #instructionPHA(opcode) {
-        // TODO
+    #instructionPHA() {
+        this.pushStack(this.getRegisterA());
     }
 
-    #instructionPHP(opcode) {
-        // TODO
+    #instructionPHP() {
+        this.pushStack(this.getStatus());
     }
 
     #instructionPLA(opcode) {
-        // TODO
+        this.setRegisterA(this.popStack());
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
     }
 
     #instructionPLP(opcode) {
-        // TODO
+        this.setStatus(this.popStack());
     }
 
     #instructionROL(opcode) {
-        // TODO
+        let value;
+
+        if (opcode.mode === addressingModes.accumulator) {
+            value = this.getRegisterA();
+
+            const isOldCarrySet = this.isCarryFlagSet();
+
+            this.#checkCarryFlagBit7(value);
+
+            value <<= 1;
+
+            if (isOldCarrySet) {
+                value |= 0x01;
+            }
+
+            this.setRegisterA(value);
+
+            value = this.getRegisterA();
+        } else {
+            const operandAddress = this.#getOperandAddress(opcode.mode);
+            value = this.#memory.read(operandAddress);
+
+            const isOldCarrySet = this.isCarryFlagSet();
+
+            this.#checkCarryFlagBit7(value);
+
+            value <<= 1;
+
+            if (isOldCarrySet) {
+                value |= 0x01;
+            }
+
+            this.#memory.write(operandAddress, value);
+
+            value = this.#memory.read(operandAddress);
+        }
+
+        this.#checkZeroFlag(value);
+        this.#checkNegativeFlag(value);
     }
 
     #instructionROR(opcode) {
-        // TODO
+        let value;
+
+        if (opcode.mode === addressingModes.accumulator) {
+            value = this.getRegisterA();
+
+            const isOldCarrySet = this.isCarryFlagSet();
+
+            this.#checkCarryFlagBit0(value);
+
+            value >>>= 1;
+
+            if (isOldCarrySet) {
+                value |= 0b1000_0000;
+            }
+
+            this.setRegisterA(value);
+
+            value = this.getRegisterA();
+        } else {
+            const operandAddress = this.#getOperandAddress(opcode.mode);
+            value = this.#memory.read(operandAddress);
+
+            const isOldCarrySet = this.isCarryFlagSet();
+
+            this.#checkCarryFlagBit0(value);
+
+            value >>>= 1;
+
+            if (isOldCarrySet) {
+                value |= 0b1000_0000;
+            }
+
+            this.#memory.write(operandAddress, value);
+
+            value = this.#memory.read(operandAddress);
+        }
+
+        this.#checkZeroFlag(value);
+        this.#checkNegativeFlag(value);
     }
 
-    #instructionRTI(opcode) {
-        // TODO
+    #instructionRTI() {
+        this.setStatus(this.popStack());
+        this.setProgramCounter(this.popWordStack());
     }
 
-    #instructionRTS(opcode) {
-        // TODO
+    #instructionRTS() {
+        this.setProgramCounter(this.popWordStack() + 1);
     }
 
     #instructionSBC(opcode) {
-        // TODO
+        const operandAddress = this.#getOperandAddress(opcode.mode);
+        const memoryValue = this.#memory.read(operandAddress);
+
+        let sum = this.getRegisterA() + twosComplement(memoryValue);
+
+        if (this.isCarryFlagSet()) {
+            sum += 1;
+        }
+
+        if (sum > 0xFF) {
+            this.setCarryFlag();
+        }
+
+        const result = new Binary8(sum);
+
+        this.#checkOverflowFlag(this.getRegisterA(), memoryValue, result.get());
+
+        this.setRegisterA(result.get());
+
+        this.#checkZeroFlag(this.getRegisterA());
+        this.#checkNegativeFlag(this.getRegisterA());
     }
 
     #instructionSEC() {
@@ -882,19 +1089,22 @@ export default class CPU {
         this.#checkNegativeFlag(this.getRegisterY());
     }
 
-    #instructionTSX(opcode) {
-        // TODO
+    #instructionTSX() {
+        this.setRegisterX(this.popStack());
+
+        this.#checkZeroFlag(this.setRegisterX());
+        this.#checkNegativeFlag(this.setRegisterX());
     }
 
-    #instructionTXA(opcode) {
+    #instructionTXA() {
         this.setRegisterA(this.getRegisterX());
 
         this.#checkZeroFlag(this.getRegisterA());
         this.#checkNegativeFlag(this.getRegisterA());
     }
 
-    #instructionTXS(opcode) {
-        // TODO
+    #instructionTXS() {
+        this.pushStack(this.getRegisterX());
     }
 
     #instructionTYA() {
@@ -910,8 +1120,16 @@ export default class CPU {
         this.setProgramCounter(operandAddress);
     }
 
-    #checkCarryFlagASL(value) {
-        if ((value >>> 7) == 1) {
+    #checkCarryFlagBit7(value) {
+        if ((value & 0b1000_0000) == 0b1000_0000) {
+            this.setCarryFlag();
+        } else {
+            this.clearCarryFlag();
+        }
+    }
+
+    #checkCarryFlagBit0(value) {
+        if ((value & 0b0000_0001) == 0b0000_0001) {
             this.setCarryFlag();
         } else {
             this.clearCarryFlag();
@@ -923,6 +1141,16 @@ export default class CPU {
             this.setZeroFlag();
         } else {
             this.clearZeroFlag();
+        }
+    }
+
+    #checkOverflowFlag(operand1, operand2, result) {
+        // If both terms have equal signs but the sum's sign is different, then overflow is set.
+        // http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+        if (((result ^ operand1) & (result ^ operand2) & signBitMask) != 0) {
+            this.setOverflowFlag();
+        } else {
+            this.clearOverflowFlag();
         }
     }
 
