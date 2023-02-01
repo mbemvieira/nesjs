@@ -286,16 +286,16 @@ export default class CPU {
         const instructionLDX = (opcode) => this.#instructionLDX.call(this, opcode);
         const instructionLDY = (opcode) => this.#instructionLDY.call(this, opcode);
         const instructionLSR = (opcode) => this.#instructionLSR.call(this, opcode);
-        const instructionNOP = (opcode) => this.#instructionNOP.call(this, opcode);
+        const instructionNOP = () => this.#instructionNOP.call(this);
         const instructionORA = (opcode) => this.#instructionORA.call(this, opcode);
-        const instructionPHA = (opcode) => this.#instructionPHA.call(this, opcode);
-        const instructionPHP = (opcode) => this.#instructionPHP.call(this, opcode);
-        const instructionPLA = (opcode) => this.#instructionPLA.call(this, opcode);
-        const instructionPLP = (opcode) => this.#instructionPLP.call(this, opcode);
+        const instructionPHA = () => this.#instructionPHA.call(this);
+        const instructionPHP = () => this.#instructionPHP.call(this);
+        const instructionPLA = () => this.#instructionPLA.call(this);
+        const instructionPLP = () => this.#instructionPLP.call(this);
         const instructionROL = (opcode) => this.#instructionROL.call(this, opcode);
         const instructionROR = (opcode) => this.#instructionROR.call(this, opcode);
-        const instructionRTI = (opcode) => this.#instructionRTI.call(this, opcode);
-        const instructionRTS = (opcode) => this.#instructionRTS.call(this, opcode);
+        const instructionRTI = () => this.#instructionRTI.call(this);
+        const instructionRTS = () => this.#instructionRTS.call(this);
         const instructionSBC = (opcode) => this.#instructionSBC.call(this, opcode);
         const instructionSEC = () => this.#instructionSEC.call(this);
         const instructionSED = () => this.#instructionSED.call(this);
@@ -304,11 +304,11 @@ export default class CPU {
         const instructionSTY = (opcode) => this.#instructionSTY.call(this, opcode);
         const instructionSTA = (opcode) => this.#instructionSTA.call(this, opcode);
         const instructionTAX = () => this.#instructionTAX.call(this);
-        const instructionTAY = (opcode) => this.#instructionTAY.call(this, opcode);
-        const instructionTSX = (opcode) => this.#instructionTSX.call(this, opcode);
-        const instructionTXA = (opcode) => this.#instructionTXA.call(this, opcode);
-        const instructionTXS = (opcode) => this.#instructionTXS.call(this, opcode);
-        const instructionTYA = (opcode) => this.#instructionTYA.call(this, opcode);
+        const instructionTAY = () => this.#instructionTAY.call(this);
+        const instructionTSX = () => this.#instructionTSX.call(this);
+        const instructionTXA = () => this.#instructionTXA.call(this);
+        const instructionTXS = () => this.#instructionTXS.call(this);
+        const instructionTYA = () => this.#instructionTYA.call(this);
 
         this.#instructionSet.set(0x69, new Opcode(0x69, 'ADC', 2, 2, addressingModes.immediate, instructionADC));
         this.#instructionSet.set(0x65, new Opcode(0x65, 'ADC', 2, 3, addressingModes.zeroPage, instructionADC));
@@ -495,6 +495,10 @@ export default class CPU {
 
         this.#instructionSet.set(0xAA, new Opcode(0xAA, 'TAX', 1, 2, addressingModes.none, instructionTAX));
         this.#instructionSet.set(0xA8, new Opcode(0xA8, 'TAY', 1, 2, addressingModes.none, instructionTAY));
+        this.#instructionSet.set(0xBA, new Opcode(0xBA, 'TSX', 1, 2, addressingModes.none, instructionTSX));
+        this.#instructionSet.set(0x8A, new Opcode(0x8A, 'TXA', 1, 2, addressingModes.none, instructionTXA));
+        this.#instructionSet.set(0x9A, new Opcode(0x9A, 'TXS', 1, 2, addressingModes.none, instructionTXS));
+        this.#instructionSet.set(0x98, new Opcode(0x98, 'TYA', 1, 2, addressingModes.none, instructionTYA));
     }
 
     #getOperandAddress(addressingMode) {
@@ -920,14 +924,14 @@ export default class CPU {
         this.pushStack(this.getStatus());
     }
 
-    #instructionPLA(opcode) {
+    #instructionPLA() {
         this.setRegisterA(this.popStack());
 
         this.#checkZeroFlag(this.getRegisterA());
         this.#checkNegativeFlag(this.getRegisterA());
     }
 
-    #instructionPLP(opcode) {
+    #instructionPLP() {
         this.setStatus(this.popStack());
     }
 
