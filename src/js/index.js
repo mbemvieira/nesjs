@@ -1,4 +1,4 @@
-import Console from "../../../emulator/Console.js";
+import Console from "../emulator/Console.js";
 
 let program = new Uint8Array([
     0xE8,

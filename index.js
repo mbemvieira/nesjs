@@ -16,7 +16,7 @@ const MIME_TYPES = {
   svg: 'image/svg+xml',
 };
 
-const STATIC_PATH = path.join(process.cwd(), './website/static');
+const STATIC_PATH = path.join(process.cwd(), './dist');
 
 const toBool = [() => true, () => false];
 
@@ -31,7 +31,7 @@ const prepareFile = async (url) => {
     const pathTraversal = !filePath.startsWith(STATIC_PATH);
     const exists = await fs.promises.access(filePath).then(...toBool);
     const found = !pathTraversal && exists;
-    const streamPath = found ? filePath : STATIC_PATH + '/404.html';
+    const streamPath = found ? filePath : STATIC_PATH + '/../src/404.html';
     const ext = path.extname(streamPath).substring(1).toLowerCase();
     const stream = fs.createReadStream(streamPath);
 
