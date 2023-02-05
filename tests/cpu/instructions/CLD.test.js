@@ -1,5 +1,5 @@
-import Console from "../../../emulator/Console.js";
-import { statusMasks as mask } from "../../../emulator/masks.js";
+import Console from "../../../src/emulator/Console.js";
+import { statusMasks as mask } from "../../../src/emulator/masks.js";
 
 test('CLD-0xD8', () => {
     let program = new Uint8Array([

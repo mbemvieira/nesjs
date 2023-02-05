@@ -1,5 +1,5 @@
-import Console from "../../../emulator/Console.js";
-import { statusMasks as mask, statusUnsetMasks as clearMask } from "../../../emulator/masks.js";
+import Console from "../../../src/emulator/Console.js";
+import { statusMasks as mask, statusUnsetMasks as clearMask } from "../../../src/emulator/masks.js";
 
 test('SEI-0x78', () => {
     let program = new Uint8Array([

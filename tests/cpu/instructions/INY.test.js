@@ -1,5 +1,5 @@
-import Console from "../../../emulator/Console.js";
-import { statusMasks as mask } from "../../../emulator/masks.js";
+import Console from "../../../src/emulator/Console.js";
+import { statusMasks as mask } from "../../../src/emulator/masks.js";
 
 test('INY-0xC8: multiple increments, negative flag', () => {
     let program = new Uint8Array([

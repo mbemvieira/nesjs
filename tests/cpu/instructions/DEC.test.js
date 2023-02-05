@@ -1,4 +1,4 @@
-import Console from "../../../emulator/Console.js";
+import Console from "../../../src/emulator/Console.js";
 
 test('DEC-0xC6: M > 0, R > 0', () => {
     let program = new Uint8Array([

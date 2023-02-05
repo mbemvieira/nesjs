@@ -1,5 +1,5 @@
-import Console from "../../../emulator/Console.js";
-import { statusMasks as mask } from "../../../emulator/masks.js";
+import Console from "../../../src/emulator/Console.js";
+import { statusMasks as mask } from "../../../src/emulator/masks.js";
 
 test('ADC-0x69: A > 0, M > 0, C = 0, R < 0', () => {
     let program = new Uint8Array([

@@ -1,4 +1,4 @@
-import Console from "../../../emulator/Console.js";
+import Console from "../../../src/emulator/Console.js";
 
 test('JMP-0x4C: absolute', () => {
     let program = new Uint8Array([

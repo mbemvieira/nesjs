@@ -1,4 +1,4 @@
-import Console from "../../../emulator/Console.js";
+import Console from "../../../src/emulator/Console.js";
 
 test('JSR-0x20: absolute', () => {
     let program = new Uint8Array([
