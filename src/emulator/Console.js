@@ -20,8 +20,8 @@ export default class Console {
         this.#cpu.reset();
     }
 
-    start() {
-        this.#cpu.run();
+    start(callback = null) {
+        this.#cpu.run(callback);
     }
 
     getCPU() {

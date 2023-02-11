@@ -230,7 +230,7 @@ export default class CPU {
         return this.#registerY.set(value);
     }
 
-    run() {
+    run(callback = null) {
         while(1) {
             const opcode = this.#memory.read(this.getProgramCounter());
 
@@ -249,6 +249,8 @@ export default class CPU {
             if (programCounterState === this.getProgramCounter()) {
                 this.setProgramCounter(programCounterState + instruction.length - 1);
             }
+
+            callback !== null && callback(this);
         }
     }
 
@@ -263,52 +265,52 @@ export default class CPU {
         const instructionBMI = (opcode) => this.#instructionBMI.call(this, opcode);
         const instructionBNE = (opcode) => this.#instructionBNE.call(this, opcode);
         const instructionBPL = (opcode) => this.#instructionBPL.call(this, opcode);
-        const instructionBRK = () => this.#instructionBRK.call(this);
+        const instructionBRK = (opcode) => this.#instructionBRK.call(this);
         const instructionBVC = (opcode) => this.#instructionBVC.call(this, opcode);
         const instructionBVS = (opcode) => this.#instructionBVS.call(this, opcode);
-        const instructionCLC = () => this.#instructionCLC.call(this);
-        const instructionCLD = () => this.#instructionCLD.call(this);
-        const instructionCLI = () => this.#instructionCLI.call(this);
-        const instructionCLV = () => this.#instructionCLV.call(this);
+        const instructionCLC = (opcode) => this.#instructionCLC.call(this);
+        const instructionCLD = (opcode) => this.#instructionCLD.call(this);
+        const instructionCLI = (opcode) => this.#instructionCLI.call(this);
+        const instructionCLV = (opcode) => this.#instructionCLV.call(this);
         const instructionCMP = (opcode) => this.#instructionCMP.call(this, opcode);
         const instructionCPX = (opcode) => this.#instructionCPX.call(this, opcode);
         const instructionCPY = (opcode) => this.#instructionCPY.call(this, opcode);
         const instructionDEC = (opcode) => this.#instructionDEC.call(this, opcode);
-        const instructionDEX = () => this.#instructionDEX.call(this);
-        const instructionDEY = () => this.#instructionDEY.call(this);
+        const instructionDEX = (opcode) => this.#instructionDEX.call(this);
+        const instructionDEY = (opcode) => this.#instructionDEY.call(this);
         const instructionEOR = (opcode) => this.#instructionEOR.call(this, opcode);
         const instructionINC = (opcode) => this.#instructionINC.call(this, opcode);
-        const instructionINX = () => this.#instructionINX.call(this);
-        const instructionINY = () => this.#instructionINY.call(this);
+        const instructionINX = (opcode) => this.#instructionINX.call(this);
+        const instructionINY = (opcode) => this.#instructionINY.call(this);
         const instructionJMP = (opcode) => this.#instructionJMP.call(this, opcode);
-        const instructionJSR = () => this.#instructionJSR.call(this);
+        const instructionJSR = (opcode) => this.#instructionJSR.call(this);
         const instructionLDA = (opcode) => this.#instructionLDA.call(this, opcode);
         const instructionLDX = (opcode) => this.#instructionLDX.call(this, opcode);
         const instructionLDY = (opcode) => this.#instructionLDY.call(this, opcode);
         const instructionLSR = (opcode) => this.#instructionLSR.call(this, opcode);
-        const instructionNOP = () => this.#instructionNOP.call(this);
+        const instructionNOP = (opcode) => this.#instructionNOP.call(this);
         const instructionORA = (opcode) => this.#instructionORA.call(this, opcode);
-        const instructionPHA = () => this.#instructionPHA.call(this);
-        const instructionPHP = () => this.#instructionPHP.call(this);
-        const instructionPLA = () => this.#instructionPLA.call(this);
-        const instructionPLP = () => this.#instructionPLP.call(this);
+        const instructionPHA = (opcode) => this.#instructionPHA.call(this);
+        const instructionPHP = (opcode) => this.#instructionPHP.call(this);
+        const instructionPLA = (opcode) => this.#instructionPLA.call(this);
+        const instructionPLP = (opcode) => this.#instructionPLP.call(this);
         const instructionROL = (opcode) => this.#instructionROL.call(this, opcode);
         const instructionROR = (opcode) => this.#instructionROR.call(this, opcode);
-        const instructionRTI = () => this.#instructionRTI.call(this);
-        const instructionRTS = () => this.#instructionRTS.call(this);
+        const instructionRTI = (opcode) => this.#instructionRTI.call(this);
+        const instructionRTS = (opcode) => this.#instructionRTS.call(this);
         const instructionSBC = (opcode) => this.#instructionSBC.call(this, opcode);
-        const instructionSEC = () => this.#instructionSEC.call(this);
-        const instructionSED = () => this.#instructionSED.call(this);
-        const instructionSEI = () => this.#instructionSEI.call(this);
+        const instructionSEC = (opcode) => this.#instructionSEC.call(this);
+        const instructionSED = (opcode) => this.#instructionSED.call(this);
+        const instructionSEI = (opcode) => this.#instructionSEI.call(this);
         const instructionSTX = (opcode) => this.#instructionSTX.call(this, opcode);
         const instructionSTY = (opcode) => this.#instructionSTY.call(this, opcode);
         const instructionSTA = (opcode) => this.#instructionSTA.call(this, opcode);
-        const instructionTAX = () => this.#instructionTAX.call(this);
-        const instructionTAY = () => this.#instructionTAY.call(this);
-        const instructionTSX = () => this.#instructionTSX.call(this);
-        const instructionTXA = () => this.#instructionTXA.call(this);
-        const instructionTXS = () => this.#instructionTXS.call(this);
-        const instructionTYA = () => this.#instructionTYA.call(this);
+        const instructionTAX = (opcode) => this.#instructionTAX.call(this);
+        const instructionTAY = (opcode) => this.#instructionTAY.call(this);
+        const instructionTSX = (opcode) => this.#instructionTSX.call(this);
+        const instructionTXA = (opcode) => this.#instructionTXA.call(this);
+        const instructionTXS = (opcode) => this.#instructionTXS.call(this);
+        const instructionTYA = (opcode) => this.#instructionTYA.call(this);
 
         this.#instructionSet.set(0x69, new Opcode(0x69, 'ADC', 2, 2, addressingModes.immediate, instructionADC));
         this.#instructionSet.set(0x65, new Opcode(0x65, 'ADC', 2, 3, addressingModes.zeroPage, instructionADC));
