@@ -1,16 +1,19 @@
 import Console from "../emulator/Console.js";
-import View from "./View.js";
+import Canvas from "./Canvas.js";
 
-let program = new Uint8Array([
-    0xE8,
-    0x00
-]);
+document.body.onload = () => {
+    let program = new Uint8Array([
+        0xE8,
+        0x00
+    ]);
 
-// const nesConsole = new Console(program);
+    // const nesConsole = new Console(program);
 
-const containerEl = document.getElementById('container');
-const view = new View(containerEl);
+    const canvasEl = document.getElementById('game-canvas');
+    const view = new Canvas(canvasEl);
+    view.draw();
 
-// nesConsole.start((cpu) => {
+    // nesConsole.start((cpu) => {
 
-// });
+    // });
+}
