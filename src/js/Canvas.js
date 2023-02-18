@@ -1,71 +1,69 @@
-import * as colors from "./colors.js";
+import * as colors from './colors.js';
 
 export default class Canvas {
-    WIDTH = 32;
-    HEIGHT = 32;
-    SCALE = 10;
+    #WIDTH = 32;
+    #HEIGHT = 32;
+    #SCALE = 10;
 
     #canvasEl;
+    #ctx;
+
     #screenState;
 
-    constructor(canvasEl) {
-        this.#canvasEl = canvasEl;
+    constructor(canvasId) {
+        const canvasEl = document.getElementById(canvasId);
 
-        this.#canvasEl.width = this.WIDTH * this.SCALE;
-        this.#canvasEl.height = this.HEIGHT * this.SCALE;
+        if (canvasEl === null) {
+            throw '[Canvas::class] Canvas element ID not found';
+        }
+
+        this.#canvasEl = canvasEl;
+        this.#canvasEl.width = this.#WIDTH * this.#SCALE;
+        this.#canvasEl.height = this.#HEIGHT * this.#SCALE;
+
+        this.#ctx = canvasEl.getContext('2d');
+
+        this.#screenState = [...Array(this.#WIDTH * this.#HEIGHT)].map(() => 0);
     }
 
     draw() {
-        const ctx = this.#canvasEl.getContext("2d");
+        if (!this.#needUpdate()) {
+            return;
+        }
 
-        ctx.fillStyle = "green";
-        ctx.fillRect(10, 10, 10, 10);
+        this.#ctx.clearRect(0, 0, this.#WIDTH, this.#HEIGHT);
+
+        let screenStateIdx = 0;
+
+        for (let i = 0; i < this.#HEIGHT; i++) {
+            for (let j = 0; j < this.#WIDTH; j++) {
+                this.#ctx.fillStyle = this.#getColor(this.#screenState[screenStateIdx]);
+                this.#ctx.fillRect(j * this.#SCALE, i * this.#SCALE, this.#SCALE, this.#SCALE);
+
+                screenStateIdx += 1;
+            }
+        }
+
+        requestAnimationFrame(() => this.draw.call(this));
     }
 
-    #color(byte) {
-        if (byte === 0) {
-            return colors.BLACK;
+    copyToScreenState(pixelsArray) {
+        if (!Array.isArray(pixelsArray)) {
+            return;
         }
 
-        if (byte === 1) {
-            return colors.WHITE;
-        }
+        const length = Math.min(this.#WIDTH * this.#HEIGHT, pixelsArray.length);
 
-        return colors.RED;
+        for (let i = 0; i < length; i++) {
+            this.#screenState[i] = pixelsArray[i];
+        }
+    }
+
+    #getColor(byte) {
+        return colors.byteToColorMap[byte] || colors.CYAN;
     }
 
     #needUpdate() {
         return true;
     }
 }
-
-// fn color(byte: u8) -> Color {
-//     match byte {
-//         0 => sdl2::pixels::Color::BLACK,
-//         1 => sdl2::pixels::Color::WHITE,
-//         2 | 9 => sdl2::pixels::Color::GREY,
-//         3 | 10 => sdl2::pixels::Color::RED,
-//         4 | 11 => sdl2::pixels::Color::GREEN,
-//         5 | 12 => sdl2::pixels::Color::BLUE,
-//         6 | 13 => sdl2::pixels::Color::MAGENTA,
-//         7 | 14 => sdl2::pixels::Color::YELLOW,
-//         _ => sdl2::pixels::Color::CYAN,
-//     }
-// }
-
-// fn read_screen_state(cpu: &CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
-//     let mut frame_idx = 0;
-//     let mut update = false;
-//     for i in 0x0200..0x600 {
-//         let color_idx = cpu.mem_read(i as u16);
-//         let (b1, b2, b3) = color(color_idx).rgb();
-//         if frame[frame_idx] != b1 || frame[frame_idx + 1] != b2 || frame[frame_idx + 2] != b3 {
-//             frame[frame_idx] = b1;
-//             frame[frame_idx + 1] = b2;
-//             frame[frame_idx + 2] = b3;
-//             update = true;
-//         }
-//         frame_idx += 3;
-//     }
-//     update
-// }

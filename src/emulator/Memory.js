@@ -28,6 +28,26 @@ export default class Memory {
         return (hi << 8) | (lo);
     }
 
+    readRange(startAddress, endAddress) {
+        if (startAddress > endAddress) {
+            return null;
+        }
+
+        const buffer = [];
+
+        for (let i = startAddress; i <= endAddress; i++) {
+            const byte = this.read(i);
+
+            if (byte === null) {
+                break;
+            }
+
+            buffer.push(byte);
+        }
+
+        return buffer;
+    }
+
     write(address, value) {
         if (!this.#isValidAddress(address)) {
             return false;

@@ -21,7 +21,7 @@ export default class Console {
     }
 
     start(callback = null) {
-        this.#cpu.run(callback);
+        this.#cpu.run(() => callback !== null && callback.call());
     }
 
     getCPU() {
