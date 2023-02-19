@@ -230,7 +230,7 @@ export default class CPU {
         return this.#registerY.set(value);
     }
 
-    run(callback) {
+    async run(callback) {
         while(1) {
             const opcode = this.#memory.read(this.getProgramCounter());
 
@@ -250,7 +250,7 @@ export default class CPU {
                 this.setProgramCounter(programCounterState + instruction.length - 1);
             }
 
-            callback();
+            await callback();
         }
     }
 

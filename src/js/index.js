@@ -1,6 +1,39 @@
 import Console from "../emulator";
 import Canvas from "./Canvas.js";
 
+const testCanvas = (canvas, delay) => {
+    let idxWhite = 0;
+    let idxRed = 1023;
+
+    setInterval(() => {
+        const screenState = [];
+
+        for (let i = 0; i < 1024; i++) {
+            if (i === idxWhite) {
+                screenState[i] = 1;
+            } else if (i === idxRed) {
+                screenState[i] = 3;
+            } else {
+                screenState[i] = 0;
+            }
+        }
+
+        idxWhite +=1;
+
+        if (idxWhite >= 1024) {
+            idxWhite = 0;
+        }
+
+        idxRed -=1;
+
+        if (idxRed < 0) {
+            idxRed = 1023;
+        }
+
+        canvas.setScreenState(screenState);
+    }, delay);
+}
+
 document.body.onload = () => {
     try {
         let program = new Uint8Array([
@@ -27,13 +60,19 @@ document.body.onload = () => {
         ]);
 
         const canvas = new Canvas('game-canvas');
-        canvas.draw();
+        canvas.start();
+        
+        // testCanvas(canvas, 50);
 
         const nesConsole = new Console(program);
 
-        nesConsole.start(() => {
+        nesConsole.start(async () => {
+            nesConsole.getMemory().write(0x00FE, 1 + Math.floor(Math.random() * 16));
+
             const screenState = nesConsole.getMemory().readRange(0x0200, 0x05FF);
-            canvas.copyToScreenState(screenState);
+            canvas.setScreenState(screenState);
+
+            await new Promise(r => setTimeout(r, 1));
         });
     } catch(error) {
         console.error(error);

@@ -3,6 +3,7 @@ import Memory from "./Memory.js";
 
 export default class Console {
     MEMORY_SIZE = 0x1_0000;
+    // pure 6502 starts at 0x0600
     PC_START = 0x8000;
 
     #cpu;

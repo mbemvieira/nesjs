@@ -9,6 +9,7 @@ export default class Canvas {
     #ctx;
 
     #screenState;
+    #screenStateBuffer;
 
     constructor(canvasId) {
         const canvasEl = document.getElementById(canvasId);
@@ -24,13 +25,43 @@ export default class Canvas {
         this.#ctx = canvasEl.getContext('2d');
 
         this.#screenState = [...Array(this.#WIDTH * this.#HEIGHT)].map(() => 0);
+        this.#screenStateBuffer = [...Array(this.#WIDTH * this.#HEIGHT)].map(() => 0);
     }
 
-    draw() {
-        if (!this.#needUpdate()) {
+    start() {
+        this.#draw();
+        this.#loop();
+    }
+
+    setScreenState(pixelsArray) {
+        if (!Array.isArray(pixelsArray)) {
             return;
         }
 
+        for (let i = 0; i < this.#screenStateBuffer.length; i++) {
+            if (i < pixelsArray.length) {
+                this.#screenStateBuffer[i] = pixelsArray[i];
+            } else {
+                this.#screenStateBuffer[i] = 0;
+            }
+        }
+    }
+
+    #loop() {
+        const loop = () => this.#loop.call(this);
+
+        if (!this.#needsUpdate()) {
+            requestAnimationFrame(loop);
+            return;
+        }
+
+        this.#moveFromBuffer();
+        this.#draw();
+
+        requestAnimationFrame(loop);
+    }
+
+    #draw() {
         this.#ctx.clearRect(0, 0, this.#WIDTH, this.#HEIGHT);
 
         let screenStateIdx = 0;
@@ -43,27 +74,23 @@ export default class Canvas {
                 screenStateIdx += 1;
             }
         }
-
-        requestAnimationFrame(() => this.draw.call(this));
-    }
-
-    copyToScreenState(pixelsArray) {
-        if (!Array.isArray(pixelsArray)) {
-            return;
-        }
-
-        const length = Math.min(this.#WIDTH * this.#HEIGHT, pixelsArray.length);
-
-        for (let i = 0; i < length; i++) {
-            this.#screenState[i] = pixelsArray[i];
-        }
     }
 
     #getColor(byte) {
         return colors.byteToColorMap[byte] || colors.CYAN;
     }
 
-    #needUpdate() {
-        return true;
+    #needsUpdate() {
+        for (let i = 0; i < this.#screenState.length; i++) {
+            if (this.#screenState[i] !== this.#screenStateBuffer[i]) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    #moveFromBuffer() {
+        this.#screenState = this.#screenStateBuffer.map((el) => el);
     }
 }
