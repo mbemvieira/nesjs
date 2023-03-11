@@ -510,7 +510,11 @@ export default class CPU {
 
         if (addressingMode === addressingModes.relative) {
             const offset = this.#memory.read(this.getProgramCounter());
-            return this.getProgramCounter() + 1 + offset;
+
+            const lo = (this.getProgramCounter() + 1 + offset) & 0x00FF;
+            const hi = this.getProgramCounter() & 0xFF00;
+
+            return hi | lo;
         }
 
         if (addressingMode === addressingModes.zeroPage) {
