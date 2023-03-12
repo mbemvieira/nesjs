@@ -231,6 +231,8 @@ export default class CPU {
     }
 
     async run(callback) {
+        let cycles = 0;
+
         while(1) {
             const opcode = this.#memory.read(this.getProgramCounter());
 
@@ -250,7 +252,14 @@ export default class CPU {
                 this.setProgramCounter(programCounterState + instruction.length - 1);
             }
 
-            await callback();
+            callback();
+
+            cycles += instruction.cycles;
+
+            if (cycles > 1000) {
+                cycles = 0;
+                await new Promise(r => setTimeout(r, 10));
+            }
         }
     }
 

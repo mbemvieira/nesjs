@@ -61,18 +61,16 @@ document.body.onload = () => {
 
         const canvas = new Canvas('game-canvas');
         canvas.start();
-        
+
         // testCanvas(canvas, 50);
 
         const nesConsole = new Console(program);
 
-        nesConsole.start(async () => {
+        nesConsole.start(() => {
             nesConsole.getMemory().write(0x00FE, 1 + Math.floor(Math.random() * 16));
 
             const screenState = nesConsole.getMemory().readRange(0x0200, 0x05FF);
             canvas.setScreenState(screenState);
-
-            await new Promise(r => setTimeout(r, 1));
         });
     } catch(error) {
         console.error(error);
